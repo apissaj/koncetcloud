@@ -37,6 +37,8 @@ Antarmuka terinspirasi dari [OmniCloud](https://github.com/dimartarmizi/OmniClou
 
 ### Keamanan
 - Login dengan scrypt + sesi token HMAC (HttpOnly, SameSite, Secure otomatis di HTTPS)
+- **Autentikasi dua faktor (TOTP)** opsional per akun, kompatibel Google Authenticator/Aegis
+- Sesi 12 jam; opsi "Tetap masuk" 14 hari
 - Rate-limit percobaan login per pengguna
 - Header keamanan (nosniff, X-Frame-Options DENY, Referrer-Policy, Permissions-Policy)
 
@@ -177,6 +179,9 @@ dengan HTTPS tanpa membuka port (aman meski IP dinamis), pakai Cloudflare Tunnel
    scripts\install-tunnel.bat
    ```
 5. Cek status: `scripts\tunnel-status.bat`
+
+Aktifkan 2FA setelah bisa diakses dari internet: buka halaman **Keamanan**,
+pindai QR dengan aplikasi autentikator, lalu konfirmasi kode 6 digit.
 
 ### Pengaman waktu publik
 
