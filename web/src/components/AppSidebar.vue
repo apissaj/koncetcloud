@@ -16,6 +16,8 @@ import {
   IconListCheckFilled,
   IconPlus,
   IconSettings,
+  IconShield,
+  IconShieldFilled,
   IconUser,
   IconUserFilled,
 } from '@tabler/icons-vue';
@@ -38,6 +40,7 @@ const navItems = computed(() => [
   { id: 'jobs', label: 'Backup', icon: IconClockHour4, activeIcon: IconClockHour4Filled },
   { id: 'quota', label: 'Penyimpanan', icon: IconCloud, activeIcon: IconCloudFilled },
   { id: 'accounts', label: 'Akun', icon: IconUser, activeIcon: IconUserFilled },
+  { id: 'security', label: 'Keamanan', icon: IconShield, activeIcon: IconShieldFilled },
   ...(props.user?.role === 'admin'
     ? [
         { id: 'users', label: 'Kelola pengguna', icon: IconListCheck, activeIcon: IconListCheckFilled },

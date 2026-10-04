@@ -24,6 +24,11 @@ import {
   findUser,
   isSecureRequest,
   SESSION_COOKIE,
+  verifyUserTotp,
+  startTotpSetup,
+  enableTotp,
+  disableTotp,
+  TTL_REMEMBER_MS,
 } from './auth.js';
 import {
   PLATFORMS,
@@ -191,7 +196,7 @@ app.use((_req, res, next) => {
 
 // --- Sesi ---
 app.post('/api/login', (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, code, remember } = req.body || {};
   const uname = String(username || '').trim();
   const pass = String(password || '');
 
@@ -214,11 +219,27 @@ app.post('/api/login', (req, res) => {
     return res.status(403).json({ error: 'Akun ini dinonaktifkan.', code: 'disabled' });
   }
 
+  // Langkah kedua: kalau 2FA aktif, kode TOTP wajib. Tanpa kode yang benar,
+  // sesi penuh TIDAK diberikan (hanya token sementara berumur 5 menit).
+  if (user.totpEnabled) {
+    if (!code) {
+      audit(req, 'login_2fa_required', `username=${uname}`, true, uname);
+      return res.status(401).json({ error: 'Kode autentikator diperlukan.', code: 'totp_required' });
+    }
+    if (!verifyUserTotp(auth.record, uname, code)) {
+      loginLimiter.fail(uname);
+      audit(req, 'login_2fa_failed', `username=${uname}`, false, uname);
+      return res.status(401).json({ error: 'Kode autentikator salah.', code: 'bad_totp' });
+    }
+  }
+
   loginLimiter.reset(uname);
-  const token = issueToken(auth.record.secret, user);
+  const ttl = remember ? TTL_REMEMBER_MS : undefined;
+  const token = ttl ? issueToken(auth.record.secret, user, ttl) : issueToken(auth.record.secret, user);
   const secure = isSecureRequest(req);
-  res.setHeader('Set-Cookie', sessionCookie(token, { secure }));
-  audit(req, 'login', `username=${uname}`, true, user.username);
+  const maxAge = ttl ? ttl / 1000 : undefined;
+  res.setHeader('Set-Cookie', maxAge ? sessionCookie(token, { secure, maxAge }) : sessionCookie(token, { secure }));
+  audit(req, 'login', `username=${uname}${user.totpEnabled ? ' (2FA)' : ''}${remember ? ' (tetap masuk)' : ''}`, true, user.username);
   res.json({ ok: true, user: { username: user.username, role: user.role } });
 });
 
@@ -234,7 +255,46 @@ app.get('/api/session', (req, res) => {
 });
 
 app.get('/api/me', requireAuth(auth.record), (req, res) => {
-  res.json({ username: req.user.username, role: req.user.role });
+  res.json({
+    username: req.user.username,
+    role: req.user.role,
+    totpEnabled: !!req.user.totpEnabled,
+  });
+});
+
+// --- 2FA (autentikator TOTP) --------------------------------------------
+// Mulai penyiapan: server membuat secret dan mengembalikan otpauth URI.
+// Secret hanya ditampilkan di langkah ini; tidak pernah masuk audit atau log.
+app.post('/api/2fa/start', requireAuth(auth.record), (req, res) => {
+  const out = startTotpSetup(auth.record, req.user.username);
+  if (out.error) return res.status(400).json({ error: out.error, code: out.code });
+  audit(req, '2fa_setup_start', `username=${req.user.username}`, true);
+  res.json({ secret: out.secret, uri: out.uri });
+});
+
+// Aktifkan: pengguna membuktikan kode dari aplikasi autentikator.
+app.post('/api/2fa/enable', requireAuth(auth.record), (req, res) => {
+  const { code } = req.body || {};
+  const out = enableTotp(auth.record, req.user.username, code);
+  if (out.error) {
+    audit(req, '2fa_enable_failed', `username=${req.user.username}`, false);
+    return res.status(out.code === 'bad_credentials' ? 401 : 400).json({ error: out.error, code: out.code });
+  }
+  audit(req, '2fa_enabled', `username=${req.user.username}`, true);
+  res.json({ ok: true });
+});
+
+// Matikan: butuh kode TOTP yang valid (kalau 2FA aktif) — mencegah sesi curian
+// mematikan 2FA tanpa tahu apa pun.
+app.post('/api/2fa/disable', requireAuth(auth.record), (req, res) => {
+  const { code } = req.body || {};
+  const out = disableTotp(auth.record, req.user.username, code);
+  if (out.error) {
+    audit(req, '2fa_disable_failed', `username=${req.user.username}`, false);
+    return res.status(out.code === 'bad_credentials' ? 401 : 400).json({ error: out.error, code: out.code });
+  }
+  audit(req, '2fa_disabled', `username=${req.user.username}`, true);
+  res.json({ ok: true });
 });
 
 // Ganti password.

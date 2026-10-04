@@ -7,6 +7,9 @@ const emit = defineEmits(['authed']);
 
 const username = ref('');
 const password = ref('');
+const code = ref('');
+const remember = ref(false);
+const needsCode = ref(false);   // server minta kode autentikator
 const busy = ref(false);
 const error = ref('');
 
@@ -21,12 +24,22 @@ async function submit() {
     const r = await fetch('/api/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: username.value.trim(), password: password.value }),
+      body: JSON.stringify({
+        username: username.value.trim(),
+        password: password.value,
+        code: code.value.trim() || undefined,
+        remember: remember.value,
+      }),
     });
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (!r.ok) {
+      // 2FA aktif: tampilkan kolom kode, jangan bersihkan username/password.
+      if (d.code === 'totp_required' || d.code === 'bad_totp') needsCode.value = true;
+      throw new Error(d.error || `HTTP ${r.status}`);
+    }
     username.value = '';
     password.value = '';
+    code.value = '';
     emit('authed', d.user);
   } catch (e) {
     error.value = e.message;
@@ -78,13 +91,35 @@ async function submit() {
         />
       </div>
 
+      <div v-if="needsCode" class="mt-4">
+        <label class="mb-1.5 block text-xs font-semibold text-[#5f6368] dark:text-slate-400" for="kc-code">Kode autentikator</label>
+        <input
+          id="kc-code"
+          v-model="code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          class="h-11 w-full rounded-xl border border-[#dadce0] bg-white px-3.5 text-center font-mono text-lg tracking-[0.3em] text-[#202124] outline-none transition focus:border-[#1a73e8] focus:shadow-[0_0_0_3px_rgba(26,115,232,0.15)] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+          placeholder="123456"
+        />
+        <p class="mt-1.5 text-[11px] text-[#5f6368] dark:text-slate-400">
+          Buka aplikasi autentikator (Google Authenticator, Aegis, dll) lalu ketik kode 6 digit.
+        </p>
+      </div>
+
+      <label class="mt-4 flex cursor-pointer items-center gap-2 text-sm text-[#5f6368] dark:text-slate-400">
+        <input v-model="remember" type="checkbox" class="size-4 accent-[#1a73e8]" />
+        Tetap masuk 14 hari
+      </label>
+
       <p v-if="error" class="mt-3 rounded-xl border border-[#ea4335]/35 bg-[#ea4335]/10 px-3 py-2 text-xs text-[#c5221f] dark:text-red-300">
         {{ error }}
       </p>
 
       <button type="submit" class="mt-5 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-[#1a73e8] text-sm font-medium text-white transition hover:bg-[#1765cc] disabled:opacity-60" :disabled="busy">
         <IconCloudFilled v-if="!busy" :size="18" :stroke="0" />
-        {{ busy ? 'Memeriksa...' : 'Masuk' }}
+        {{ busy ? 'Memeriksa...' : needsCode ? 'Verifikasi' : 'Masuk' }}
       </button>
     </form>
   </div>

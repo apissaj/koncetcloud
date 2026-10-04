@@ -8,6 +8,7 @@ import HomeView from './components/HomeView.vue';
 import QuotaPanel from './components/QuotaPanel.vue';
 import AccountsPanel from './components/AccountsPanel.vue';
 import UsersPanel from './components/UsersPanel.vue';
+import SecurityPanel from './components/SecurityPanel.vue';
 import AuditPanel from './components/AuditPanel.vue';
 import LoginView from './components/LoginView.vue';
 
@@ -24,8 +25,8 @@ const currentUser = ref(null); // { username, role }
 const isAdmin = computed(() => currentUser.value?.role === 'admin');
 const sessionError = ref('');
 
-const VIEW_HASH = { home: 'beranda', drive: 'drive', jobs: 'backup', quota: 'penyimpanan', accounts: 'akun', users: 'pengguna', audit: 'riwayat' };
-const HASH_VIEW = { beranda: 'home', drive: 'drive', berkas: 'drive', backup: 'jobs', penyimpanan: 'quota', kapasitas: 'quota', akun: 'accounts', pengguna: 'users', riwayat: 'audit' };
+const VIEW_HASH = { home: 'beranda', drive: 'drive', jobs: 'backup', quota: 'penyimpanan', accounts: 'akun', users: 'pengguna', audit: 'riwayat', security: 'keamanan' };
+const HASH_VIEW = { beranda: 'home', drive: 'drive', berkas: 'drive', backup: 'jobs', penyimpanan: 'quota', kapasitas: 'quota', akun: 'accounts', pengguna: 'users', riwayat: 'audit', keamanan: 'security' };
 
 async function api(url, opts) {
   const r = await fetch(url, opts);
@@ -256,6 +257,8 @@ onMounted(async () => {
     <QuotaPanel v-else-if="view === 'quota'" :remotes="remotes" />
 
     <AccountsPanel v-else-if="view === 'accounts'" :role="currentUser?.role" @changed="loadStatus" />
+
+    <SecurityPanel v-else-if="view === 'security'" :user="currentUser" />
 
     <p v-else class="rounded-2xl border border-[#e0e3e7] bg-white p-6 text-sm text-[#5f6368] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
       Halaman ini hanya untuk admin.

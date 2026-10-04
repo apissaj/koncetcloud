@@ -11,7 +11,9 @@ const AUTH_FILE = path.join(__dirname, 'auth.json');
 const PASSWORD_FILE = path.join(__dirname, '.password.txt');
 
 export const SESSION_COOKIE = 'kc_session';
-const TTL_MS = 1000 * 60 * 60 * 24 * 14;
+const TTL_MS = 1000 * 60 * 60 * 12;           // default: 12 jam
+export const TTL_REMEMBER_MS = 1000 * 60 * 60 * 24 * 14;  // "tetap masuk": 14 hari
+export 
 const ROLES = ['admin', 'viewer'];
 
 function scrypt(password, salt) {
@@ -31,6 +33,74 @@ export function verifyPassword(password, rec) {
   return crypto.timingSafeEqual(got, want);
 }
 
+// --- TOTP RFC 6238 (HMAC-SHA1, 6 digit, periode 30 detik) -------------------
+const B32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+export function base32Encode(buf) {
+  let bits = 0, value = 0, out = '';
+  for (const byte of buf) {
+    value = (value << 8) | byte;
+    bits += 8;
+    while (bits >= 5) {
+      out += B32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) out += B32_ALPHABET[(value << (5 - bits)) & 31];
+  return out;
+}
+
+export function base32Decode(str) {
+  const clean = String(str).toUpperCase().replace(/=+$/, '').replace(/\s/g, '');
+  let bits = 0, value = 0;
+  const out = [];
+  for (const ch of clean) {
+    const idx = B32_ALPHABET.indexOf(ch);
+    if (idx === -1) continue; // karakter tidak sah di-skip
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      out.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(out);
+}
+
+function hotp(secretBuf, counter) {
+  const buf = Buffer.alloc(8);
+  buf.writeBigUInt64BE(BigInt(counter));
+  const hmac = crypto.createHmac('sha1', secretBuf).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code = ((hmac[offset] & 0x7f) << 24) | (hmac[offset + 1] << 16) | (hmac[offset + 2] << 8) | hmac[offset + 3];
+  return code % 10 ** 6;
+}
+
+/** Kode TOTP untuk waktu tertentu (default: sekarang). */
+export function totpAt(secretBase32, timeMs = Date.now()) {
+  const counter = Math.floor(timeMs / 1000 / 30);
+  return String(hotp(base32Decode(secretBase32), counter)).padStart(6, '0');
+}
+
+/** Verifikasi kode dengan jendela ±1 periode (toleransi jam miring). */
+export function verifyTotp(secretBase32, code) {
+  const c = String(code || '').replace(/\D/g, '');
+  if (c.length !== 6) return false;
+  const now = Date.now();
+  for (const delta of [-1, 0, 1]) {
+    if (totpAt(secretBase32, now + delta * 30000) === c) return true;
+  }
+  return false;
+}
+
+export function generateTotpSecret() {
+  return base32Encode(crypto.randomBytes(20)); // 160 bit, saran Google
+}
+
+export function otpauthUri(username, secretBase32) {
+  return `otpauth://totp/KoncetCloud:${encodeURIComponent(username)}?secret=${secretBase32}&issuer=KoncetCloud&algorithm=SHA1&digits=6&period=30`;
+}
+
 function b64url(buf) {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -40,13 +110,14 @@ function fromB64url(str) {
 }
 
 // --- Sesi: payload memuat identitas pengguna, bukan cuma masa berlaku ------
-export function issueToken(secret, user, ttlMs = TTL_MS) {
+export function issueToken(secret, user, ttlMs = TTL_MS, extra = {}) {
   const payload = b64url(
-    Buffer.from(JSON.stringify({ u: user.username, r: user.role, exp: Date.now() + ttlMs })),
+    Buffer.from(JSON.stringify({ u: user.username, r: user.role, exp: Date.now() + ttlMs, ...extra })),
   );
   const sig = b64url(crypto.createHmac('sha256', secret).update(payload).digest());
   return `${payload}.${sig}`;
 }
+
 
 /** Mengembalikan {u, r} bila token sah, atau null. */
 export function verifyToken(token, secret) {
@@ -61,7 +132,7 @@ export function verifyToken(token, secret) {
     const data = JSON.parse(fromB64url(payload).toString('utf8'));
     if (typeof data.exp !== 'number' || Date.now() >= data.exp) return null;
     if (typeof data.u !== 'string' || !data.u) return null;
-    return { u: data.u, r: data.r === 'admin' ? 'admin' : 'viewer' };
+    return { u: data.u, r: data.r === 'admin' ? 'admin' : 'viewer', pending: data.p === '2fa' };
   } catch {
     return null;
   }
@@ -97,7 +168,13 @@ function writeRaw(data) {
 }
 
 export function publicUser(u) {
-  return { username: u.username, role: u.role, createdAt: u.createdAt || null, disabled: !!u.disabled };
+  return {
+    username: u.username,
+    role: u.role,
+    createdAt: u.createdAt || null,
+    disabled: !!u.disabled,
+    totpEnabled: !!u.totpEnabled,
+  };
 }
 
 /**
@@ -211,16 +288,65 @@ export function changePassword(record, username, nextPassword, { rotateSecret = 
   Object.assign(u, makeRecord(nextPassword));
   if (rotateSecret) record.secret = crypto.randomBytes(32).toString('hex');
   writeRaw(record);
-  // Berkas .password.txt hanya berlaku untuk pengguna admin pertama. Jangan
-  // hapus saat yang diganti pengguna lain: catatan itu masih dipakai pemilik.
+  // Berkas .password.txt adalah catatan milik pemilik. Saat password admin
+  // diganti, TULIS ULANG dengan password baru supaya catatan selalu akurat
+  // (sebelumnya dihapus, dan pemilik jadi kehilangan catatannya).
   if (u.role === 'admin' && record.users.filter((x) => x.role === 'admin').length === 1) {
     try {
-      fs.unlinkSync(PASSWORD_FILE);
+      fs.writeFileSync(
+        PASSWORD_FILE,
+        `Password KoncetCloud (pengguna: ${u.username})\n${String(nextPassword)}\n\nUbah lewat UI: Akun -> Kelola pengguna -> Ganti password\n`,
+        { mode: 0o600 },
+      );
     } catch {
-      /* tidak ada berkas plaintext */
+      /* gagal menulis catatan tidak boleh menjatuhkan perubahan password */
     }
   }
   return { ok: true };
+}
+
+// --- 2FA: aktifkan / matikan ------------------------------------------------
+/** Buat secret baru (belum aktif) untuk ditampilkan sebagai QR/teks. */
+export function startTotpSetup(record, username) {
+  const u = findUser(record, username);
+  if (!u) return { error: 'Pengguna tidak ditemukan.', code: 'not_found' };
+  u.totpPending = generateTotpSecret();
+  writeRaw(record);
+  return { secret: u.totpPending, uri: otpauthUri(u.username, u.totpPending) };
+}
+
+/** Aktifkan 2FA setelah pengguna membuktikan kode dari aplikasi autentikator. */
+export function enableTotp(record, username, code) {
+  const u = findUser(record, username);
+  if (!u) return { error: 'Pengguna tidak ditemukan.', code: 'not_found' };
+  const secret = u.totpPending || u.totpSecret;
+  if (!secret) return { error: 'Mulai penyiapan 2FA dulu.', code: 'bad_request' };
+  if (!verifyTotp(secret, code)) return { error: 'Kode tidak cocok. Coba lagi.', code: 'bad_credentials' };
+  u.totpSecret = secret;
+  u.totpEnabled = true;
+  u.totpPending = null;
+  writeRaw(record);
+  return { ok: true };
+}
+
+/** Matikan 2FA. Wajib membuktikan kode (kalau aktif) atau password (dicek pemanggil). */
+export function disableTotp(record, username, code) {
+  const u = findUser(record, username);
+  if (!u) return { error: 'Pengguna tidak ditemukan.', code: 'not_found' };
+  if (u.totpEnabled && !verifyTotp(u.totpSecret, code)) {
+    return { error: 'Kode tidak cocok. Coba lagi.', code: 'bad_credentials' };
+  }
+  u.totpSecret = null;
+  u.totpEnabled = false;
+  u.totpPending = null;
+  writeRaw(record);
+  return { ok: true };
+}
+
+export function verifyUserTotp(record, username, code) {
+  const u = findUser(record, username);
+  if (!u || !u.totpEnabled) return true; // 2FA nonaktif: tidak perlu kode
+  return verifyTotp(u.totpSecret, code);
 }
 
 // --- Middleware -------------------------------------------------------------
