@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Cek sintaks server
+        run: |
+          node --check server/index.js
+          node --check server/auth.js
+          node --check server/platforms.js
+      - name: Install & build frontend
+        working-directory: web
+        run: |
+          npm install
+          npm run build
+      - name: Cek tidak ada hasil build di repo
+        run: |
+          if git ls-files | grep -q '^web/dist/'; then
+            echo "web/dist/ ter-commit, hapus dari index"; exit 1
+          fi

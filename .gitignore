@@ -1,0 +1,26 @@
+# Kredensial: JANGAN pernah di-commit
+server/auth.json
+server/.password.txt
+server/jobs.json
+
+# Hasil build & dependensi
+node_modules/
+web/dist/
+web/node_modules/
+
+# Log, artefak & file kerja lokal
+logs/
+server/logs/
+_shots/
+_ui-backup/
+_ref/
+_audit/
+_probe_src/
+*.bak
+server/auth.json.bak*
+server/.password.txt*
+
+# Sampah editor / OS
+.DS_Store
+Thumbs.db
+*.log
