@@ -4,7 +4,12 @@
 
 # KoncetCloud
 
-[![Node.js](https://img.shields.io/badge/Node.js-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/) [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/) [![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)](https://vuejs.org/) [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![rclone](https://img.shields.io/badge/rclone-0079BF?style=for-the-badge&logo=rclone&logoColor=white)](https://rclone.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/) [![Express](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/) [![Vue.js](https://img.shields.io/badge/Vue.js-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)](https://vuejs.org/) [![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/) [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/) [![rclone](https://img.shields.io/badge/rclone-0079BF?style=for-the-badge&logo=rclone&logoColor=white)](https://rclone.org/) [![CI](https://github.com/apissaj/koncetcloud/actions/workflows/ci.yml/badge.svg)](https://github.com/apissaj/koncetcloud/actions/workflows/ci.yml)
+
+
+<p align="center">
+  <img src="docs/screenshot-login.png" alt="KoncetCloud" width="760">
+</p>
 
 **KoncetCloud** adalah antarmuka web sendiri (self-hosted) untuk **rclone** - jelajahi berkas, kelola job backup, dan pantau kuota dari banyak penyedia cloud dalam satu tempat. Aplikasi ini menangani **control plane** saja; data tidak pernah lewat proses ini. rclone yang mengunggah, server ini hanya memberi perintah.
 
