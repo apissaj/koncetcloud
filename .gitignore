@@ -16,6 +16,7 @@ _ui-backup/
 _ref/
 _audit/
 _probe_src/
+_demo/
 *.bak
 server/auth.json.bak*
 server/.password.txt*
