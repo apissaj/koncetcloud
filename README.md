@@ -156,6 +156,37 @@ scripts/                 # preflight read-only, pembuat job mirror
 - Jangan mengekspos port RC rclone (5572) ke internet. Untuk akses publik,
   letakkan KoncetCloud di belakang HTTPS (mis. Cloudflare Tunnel).
 
+## Akses publik (Cloudflare Tunnel)
+
+KoncetCloud dirancang untuk dipakai sendiri. Untuk mengaksesnya dari internet
+dengan HTTPS tanpa membuka port (aman meski IP dinamis), pakai Cloudflare Tunnel:
+
+1. Install cloudflared:
+   ```
+   winget install --id Cloudflare.cloudflared
+   ```
+2. Buat tunnel di [Cloudflare Zero Trust](https://one.dash.cloudflare.com/) ->
+   Networks -> Tunnels -> Create a tunnel (Cloudflared). Beri nama, lalu di step
+   Public Hostname set:
+   - Subdomain/domain: `kc.koncetcloud.web.id`
+   - Service: `http://localhost:5599`
+3. Simpan token dari dashboard ke `scripts/tunnel.token` (satu baris).
+   File ini sudah masuk `.gitignore`, jangan pernah di-commit.
+4. Pasang sebagai service Windows:
+   ```
+   scripts\install-tunnel.bat
+   ```
+5. Cek status: `scripts\tunnel-status.bat`
+
+### Pengaman waktu publik
+
+- Server mendeteksi `x-forwarded-proto: https` dan menandai cookie sesi sebagai
+  `Secure` otomatis.
+- `trust proxy` aktif supaya rate-limit login membaca IP asli pengunjung.
+- Jangan pernah mengekspos port rclone RC (`5572`) ke internet.
+- Laptop harus menyala dan KoncetCloud berjalan agar aplikasi bisa diakses
+  (beda dari aplikasi serverless yang jalan 24/7 di Cloudflare).
+
 ## Kontribusi
 
 Baca [CONTRIBUTING.md](CONTRIBUTING.md).

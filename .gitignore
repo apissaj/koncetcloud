@@ -3,6 +3,10 @@ server/auth.json
 server/.password.txt
 server/jobs.json
 
+# Token Cloudflare Tunnel: kredensial, jangan pernah di-commit
+scripts/tunnel.token
+*.token
+
 # Hasil build & dependensi
 node_modules/
 web/dist/
