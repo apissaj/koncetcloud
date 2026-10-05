@@ -259,13 +259,13 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="grid min-h-[calc(100vh-64px)] grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)]">
-      <div class="hidden overflow-y-auto border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
+      <div class="hidden h-[calc(100vh-64px)] overflow-hidden border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
         <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
       </div>
 
       <div v-if="isMobileNavOpen" class="fixed inset-0 z-40 lg:hidden" @click.self="closeMobileNav">
         <div class="absolute inset-0 bg-slate-900/40" />
-        <div class="absolute left-0 top-0 h-full w-[280px] overflow-y-auto border-r border-[#e8eaed] bg-white px-3 py-4 dark:border-slate-700 dark:bg-slate-800" data-mobile-nav-card>
+        <div class="absolute left-0 top-0 flex h-full w-[280px] flex-col overflow-hidden border-r border-[#e8eaed] bg-white px-3 py-4 dark:border-slate-700 dark:bg-slate-800" data-mobile-nav-card>
           <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
         </div>
       </div>
