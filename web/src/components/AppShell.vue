@@ -154,7 +154,7 @@ onBeforeUnmount(() => {
   <div class="min-h-screen bg-[#f8fafd] text-[#202124] dark:bg-slate-900 dark:text-slate-100">
     <HelpModal :version="status?.version" :rc="status?.rc" :open="isHelpModalOpen" @close="isHelpModalOpen = false" />
 
-    <header class="grid h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 px-2 sm:gap-4 sm:px-4 lg:grid-cols-[256px_minmax(320px,720px)_1fr] lg:gap-3 lg:px-0 lg:pr-4">
+    <header class="sticky top-0 z-30 grid h-16 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 bg-[#f8fafd] px-2 dark:bg-slate-900 sm:gap-4 sm:px-4 lg:grid-cols-[256px_minmax(320px,720px)_1fr] lg:gap-3 lg:px-0 lg:pr-4">
       <div class="flex min-w-0 items-center gap-2 lg:gap-3 lg:pl-4">
         <button type="button" class="grid size-10 shrink-0 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10 lg:hidden" aria-label="Buka menu navigasi" @click.stop="isMobileNavOpen = !isMobileNavOpen">
           <IconMenu2 :size="22" :stroke="2" />
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="grid min-h-[calc(100vh-64px)] grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)]">
-      <div class="hidden h-[calc(100vh-64px)] overflow-hidden border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
+      <div class="sticky top-0 hidden h-[calc(100vh-64px)] overflow-hidden border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
         <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
       </div>
 
