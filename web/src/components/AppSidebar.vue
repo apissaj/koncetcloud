@@ -1,11 +1,13 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import {
   IconClipboardList,
   IconClipboardListFilled,
   IconClockHour4,
   IconClockHour4Filled,
   IconCloud,
+  IconChevronDown,
+  IconChevronRight,
   IconCloudFilled,
   IconFolder,
   IconFolderFilled,
@@ -30,6 +32,24 @@ const props = defineProps({
 
 const isAdmin = computed(() => props.user?.role === 'admin');
 const emit = defineEmits(['select-remote', 'view']);
+
+// Daftar remote bisa dilipat. Default tertutup kalau banyak remote, supaya
+// sidebar tidak penuh; angka total tetap terlihat. Kolaps dihitung DINAMIS
+// (bukan saat mount), karena props.remotes terisi asinkron setelah mount.
+const MAX_VISIBLE = 5;
+const remotesCollapsed = ref(false);
+const userToggledCollapse = ref(false);
+watch(
+  () => props.remotes.length,
+  (n) => {
+    if (!userToggledCollapse.value && n > MAX_VISIBLE) remotesCollapsed.value = true;
+  },
+  { immediate: true },
+);
+function toggleCollapse() {
+  userToggledCollapse.value = true;
+  remotesCollapsed.value = !remotesCollapsed.value;
+}
 
 // Menu utama (semua peran)
 const mainNav = computed(() => [
@@ -62,6 +82,18 @@ const percent = computed(() => {
   return Math.min(100, (totalUsed.value / totalCapacity.value) * 100);
 });
 const percentLabel = computed(() => `${percent.value.toFixed(percent.value >= 10 ? 0 : 1)}%`);
+
+// Saat dilipat: tampilkan remote yang sedang dipilih + beberapa teratas saja.
+const visibleRemotes = computed(() => {
+  if (!remotesCollapsed.value) return props.remotes;
+  const shown = props.remotes.slice(0, MAX_VISIBLE);
+  const current = props.remotes.find((r) => props.active === `${r.name}:`);
+  if (current && !shown.some((r) => r.name === current.name)) {
+    return [...shown.slice(0, MAX_VISIBLE - 1), current];
+  }
+  return shown;
+});
+const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRemotes.value.length));
 </script>
 
 <template>
@@ -119,11 +151,18 @@ const percentLabel = computed(() => `${percent.value.toFixed(percent.value >= 10
 
     <div class="mx-3.5 h-px bg-[#e8eaed] dark:bg-slate-700" aria-hidden="true" />
     <div class="min-h-0">
-      <p class="mb-1.5 px-3.5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#5f6368] dark:text-slate-400">
-        Remote
-      </p>
-      <ul class="flex flex-col gap-0.5">
-        <li v-for="r in remotes" :key="r.name">
+      <button
+        type="button"
+        class="mb-1 flex w-full items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/5"
+        :aria-expanded="!remotesCollapsed"
+        @click="toggleCollapse"
+      >
+        <component :is="remotesCollapsed ? IconChevronRight : IconChevronDown" :size="14" :stroke="2" class="shrink-0 text-[#5f6368] dark:text-slate-400" />
+        <span class="text-[11px] font-bold uppercase tracking-[0.08em] text-[#5f6368] dark:text-slate-400">Remote</span>
+        <span class="ml-auto rounded-full border border-[#dadce0] px-1.5 py-0.5 text-[10px] font-medium text-[#5f6368] dark:border-slate-600 dark:text-slate-400">{{ remotes.length }}</span>
+      </button>
+      <ul class="flex max-h-[38vh] flex-col gap-0.5 overflow-y-auto pt-0.5">
+        <li v-for="r in visibleRemotes" :key="r.name">
           <button
             type="button"
             class="flex w-full items-center justify-between gap-2 rounded-xl px-3.5 py-2 text-left text-sm transition"
@@ -141,6 +180,15 @@ const percentLabel = computed(() => `${percent.value.toFixed(percent.value >= 10
         </li>
         <li v-if="!remotes.length" class="px-3.5 py-2 text-xs text-[#5f6368] dark:text-slate-400">
           Belum ada remote rclone.
+        </li>
+        <li v-else-if="hiddenCount > 0">
+          <button
+            type="button"
+            class="w-full rounded-xl px-3.5 py-2 text-left text-xs font-medium text-[#1a73e8] transition hover:bg-[#e8f0fe]/60 dark:text-sky-300 dark:hover:bg-sky-500/10"
+            @click="toggleCollapse"
+          >
+            +{{ hiddenCount }} remote lagi
+          </button>
         </li>
       </ul>
     </div>
