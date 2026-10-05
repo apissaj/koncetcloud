@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
     </header>
 
     <div class="grid min-h-[calc(100vh-64px)] grid-cols-1 lg:grid-cols-[256px_minmax(0,1fr)]">
-      <div class="hidden border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
+      <div class="hidden overflow-y-auto border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
         <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
       </div>
 
