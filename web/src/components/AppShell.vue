@@ -212,7 +212,7 @@ onBeforeUnmount(() => {
           </button>
           <div
             v-if="notifOpen"
-            class="absolute right-0 top-full z-40 mt-2 w-[330px] max-w-[80vw] overflow-hidden rounded-2xl border border-[#e0e3e7] bg-white shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800"
+            class="absolute right-0 top-full z-40 mt-2 w-[350px] max-w-[85vw] overflow-hidden rounded-2xl border border-[#e0e3e7] bg-white shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800"
           >
             <header class="flex items-center justify-between border-b border-[#eceff1] px-4 py-3 dark:border-slate-700">
               <span class="text-xs font-bold uppercase tracking-[0.08em] text-[#5f6368] dark:text-slate-400">Pemberitahuan</span>
@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
               Memuat pemberitahuan...
             </p>
 
-            <ul v-if="!notifError" class="max-h-[320px] overflow-y-auto px-2 py-2">
+            <ul v-if="!notifError" class="max-h-[min(60vh,420px)] overflow-y-auto px-2 pb-4 pt-2">
               <li
                 v-for="(n, i) in notifItems"
                 :key="i"
@@ -238,14 +238,14 @@ onBeforeUnmount(() => {
               >
                 <IconAlertTriangle v-if="n.kind === 'warn'" :size="16" :stroke="2" class="mt-0.5 shrink-0" />
                 <IconCircleCheck v-else :size="16" :stroke="2" class="mt-0.5 shrink-0" />
-                <span>{{ n.text }}</span>
+                <span class="min-w-0 leading-snug">{{ n.text }}</span>
               </li>
               <li v-if="!notifItems.length" class="px-3 py-3 text-sm text-[#5f6368] dark:text-slate-400">
                 Tidak ada pemberitahuan. Semua berjalan normal.
               </li>
             </ul>
 
-            <footer class="border-t border-[#eceff1] px-4 py-2.5 text-right dark:border-slate-700">
+            <footer class="border-t border-[#eceff1] px-4 py-3 text-right dark:border-slate-700">
               <button type="button" class="text-xs font-medium text-[#1a73e8] transition hover:underline dark:text-sky-300" @click="loadNotif">
                 Muat ulang
               </button>
