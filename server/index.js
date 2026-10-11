@@ -40,6 +40,7 @@ import {
   isValidRemoteName,
   resolveAccount,
 } from './platforms.js';
+import { mountPhoneUpload } from './phoneupload.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RC = process.env.RC_ADDR || 'http://127.0.0.1:5572';
@@ -745,6 +746,14 @@ app.get('/api/jobs/:id/progress', authed, async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// Backup dari HP: upload chunked dari browser -> staging lokal -> remote cloud.
+mountPhoneUpload(app, {
+  rc,
+  adminOnly,
+  audit,
+  isValidRemote: (name) => /^[A-Za-z0-9._-]+$/.test(name),
 });
 
 const dist = path.join(__dirname, '..', 'web', 'dist');

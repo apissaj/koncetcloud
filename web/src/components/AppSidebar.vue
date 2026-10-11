@@ -9,6 +9,8 @@ import {
   IconClockHour4Filled,
   IconCloud,
   IconCloudFilled,
+  IconDeviceMobile,
+  IconDeviceMobileFilled,
   IconFolder,
   IconFolderFilled,
   IconHome,
@@ -62,6 +64,7 @@ const adminNav = computed(() =>
   isAdmin.value
     ? [
         { id: 'quota', label: 'Penyimpanan', icon: IconCloud, activeIcon: IconCloudFilled },
+        { id: 'hp', label: 'Backup HP', icon: IconDeviceMobile, activeIcon: IconDeviceMobileFilled },
         { id: 'users', label: 'Kelola pengguna', icon: IconListCheck, activeIcon: IconListCheckFilled },
         { id: 'audit', label: 'Riwayat', icon: IconClipboardList, activeIcon: IconClipboardListFilled },
       ]
