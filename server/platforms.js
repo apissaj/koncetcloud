@@ -397,6 +397,32 @@ async function authLocalPortSupported() {
   return _localPortSupported;
 }
 
+// Bunuh proses `rclone authorize` yatim yang masih memegang port 53682.
+// Yatim muncul kalau server restart di tengah OAuth (map oauthProcesses hilang,
+// proses anak rclone tidak ikut mati). Filter ketat: HANYA proses yang
+// command line-nya mengandung "authorize" dan bukan "rcd" — rcd aman.
+async function killStaleAuthorize() {
+  if (process.platform !== 'win32') return;
+  try {
+    const { stdout } = await new Promise((resolve, reject) => {
+      const p = spawn(
+        'powershell',
+        ['-NoProfile', '-Command',
+          "Get-CimInstance Win32_Process -Filter \"Name='rclone.exe'\" | Where-Object { $_.CommandLine -match 'authorize' -and $_.CommandLine -notmatch 'rcd' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; Write-Output $_.ProcessId }"],
+        { windowsHide: true },
+      );
+      let out = '';
+      p.stdout.on('data', (d) => (out += d.toString()));
+      p.stderr.on('data', (d) => (out += d.toString()));
+      p.on('error', reject);
+      p.on('close', () => resolve({ stdout: out }));
+    });
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 function spawnAuthorize(backend, useLocalPort, donor) {
   const args = ['authorize', backend, '--auth-no-open-browser'];
   if (useLocalPort) args.push('--auth-local-port', '53700');
@@ -491,6 +517,13 @@ async function onOAuthClose(rec, rc, code) {
       attachOAuthHandlers(rec, rc);
       return;
     }
+    // rclone tidak bisa bind ke 53682 karena masih dipakai proses OAuth lain.
+    if (/bind|address already in use|Only one usage/i.test(rec.buffer)) {
+      return finishOAuth(rec.id, {
+        status: 'failed',
+        error: 'Port 53682 sedang dipakai proses lain (sisa percobaan login sebelumnya). Coba lagi; kalau tetap gagal, restart service omni-buddy.',
+      });
+    }
     return finishOAuth(rec.id, { status: 'failed', error: 'Proses otorisasi berhenti sebelum selesai.' });
   }
   const blob = extractTokenBlob(rec.buffer);
@@ -557,6 +590,16 @@ export async function startOAuth({ rc, platform, remoteName }) {
   if (remotes.includes(remoteName)) {
     return { status: 409, body: { error: `Remote "${remoteName}" sudah terpasang.`, code: 'already_exists' } };
   }
+
+  // Batalkan percobaan OAuth yang masih menunggu. Rclone selalu bind ke 53682,
+  // jadi proses lama yang belum selesai akan membuat percobaan baru gagal bind.
+  for (const old of oauthProcesses.values()) {
+    if (old.status === 'waiting') {
+      finishOAuth(old.id, { status: 'failed', error: 'Dibatalkan: percobaan login baru dimulai.' });
+    }
+  }
+  // Buang juga authorize yatim (mis. sisa restart server) yang masih pegang 53682.
+  await killStaleAuthorize();
 
   const processId = crypto.randomUUID();
   const useLocalPort = await authLocalPortSupported();
