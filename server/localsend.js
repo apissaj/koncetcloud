@@ -147,6 +147,42 @@ function activeSession() {
   return null;
 }
 
+/** Copy satu file ke remote lewat RC dengan pola job async.
+ *  Panggilan sinkron untuk file besar (ratusan MB) rawan putus ("fetch failed"),
+ *  jadi kita jalankan sebagai job lalu poll `job/status` sampai selesai. */
+async function copyFileToRemote(rc, srcFs, srcRemote, dstFs, dstRemote) {
+  let jobid;
+  try {
+    const r = await rc('operations/copyfile', {
+      srcFs,
+      srcRemote,
+      dstFs,
+      dstRemote,
+      _async: 'true',
+    });
+    jobid = r?.jobid;
+  } catch (e) {
+    throw new Error(`mulai copy gagal: ${e.message}`);
+  }
+  if (jobid == null) return; // server balas sinkron (jarang) = sudah selesai
+
+  const deadline = Date.now() + 30 * 60 * 1000; // maks 30 menit per file
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 1000));
+    let st;
+    try {
+      st = await rc('job/status', { jobid });
+    } catch (e) {
+      throw new Error(`cek status gagal: ${e.message}`);
+    }
+    if (st?.finished) {
+      if (st.success) return;
+      throw new Error(st.error || 'copy gagal');
+    }
+    if (Date.now() > deadline) throw new Error('timeout menyalin file');
+  }
+}
+
 /** Nama unik di remote: kalau sudah ada, tambahkan " (2)", " (3)", ... */
 async function uniqueRemoteName(rc, fsRoot, name) {
   const dot = name.lastIndexOf('.');
@@ -168,25 +204,53 @@ function localDateKey(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/** Semua file sesi selesai diterima: dorong ke remote, lalu bersihkan staging. */
+/** Semua file sesi selesai diterima: dorong ke remote, lalu bersihkan staging.
+ *  HANYA file yang berhasil di-copy yang dihapus dari staging. File gagal
+ *  DIPERTAHANKAN supaya bisa di-retry tanpa minta HP kirim ulang. */
 async function pushSession(s, rc, audit) {
   const dir = path.join(STAGING, s.id);
   const fsRoot = DEST_DATED ? `${DEST}/${localDateKey()}` : DEST;
+  const success = [];
+  const failed = [];
   for (const f of s.files.values()) {
-    try {
-      const dst = await uniqueRemoteName(rc, fsRoot, f.name);
-      await rc('operations/copyfile', {
-        srcFs: dir,
-        srcRemote: f.name,
-        dstFs: fsRoot,
-        dstRemote: dst,
-      });
-      audit('localsend_upload', `${fsRoot}/${dst} (${f.size} byte)`, true, s.ip);
-    } catch (e) {
-      audit('localsend_upload', `${f.name}: ${e.message}`, false, s.ip);
+    const srcPath = path.join(dir, f.name);
+    let lastErr = null;
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const dst = await uniqueRemoteName(rc, fsRoot, f.name);
+        await copyFileToRemote(rc, dir, f.name, fsRoot, dst);
+        audit('localsend_upload', `${fsRoot}/${dst} (${f.size} byte)`, true, s.ip);
+        success.push(srcPath);
+        lastErr = null;
+        break;
+      } catch (e) {
+        lastErr = e;
+        if (attempt < 2) await new Promise((r) => setTimeout(r, 3000));
+      }
+    }
+    if (lastErr) {
+      audit('localsend_upload', `${f.name}: ${lastErr.message}`, false, s.ip);
+      failed.push(f.name);
     }
   }
-  removeSession(s.id);
+  if (!failed.length) {
+    removeSession(s.id); // semua sukses: hapus staging sesi
+  } else {
+    // Simpan yang gagal di folder khusus agar tidak ikut terhapus sesi berikutnya.
+    const keepDir = path.join(STAGING, 'failed');
+    fs.mkdirSync(keepDir, { recursive: true });
+    for (const name of failed) {
+      const src = path.join(dir, name);
+      const dst = path.join(keepDir, `${s.id}-${name}`);
+      try {
+        fs.renameSync(src, dst);
+      } catch {
+        fs.copyFileSync(src, dst);
+      }
+    }
+    removeSession(s.id); // hapus sisa staging sesi (file sukses + folder kosong)
+    audit('localsend_upload', `gagal, disimpan di staging/failed: ${failed.join(', ')}`, false, s.ip);
+  }
 }
 
 /** Perangkat lain mengumumkan dirinya: balas supaya dia mencatat kita. */
