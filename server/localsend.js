@@ -7,6 +7,7 @@
 // Server ini berperan sebagai "receiver"; HP tetap pakai aplikasi LocalSend.
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
 import http from 'node:http';
 import https from 'node:https';
 import dgram from 'node:dgram';
@@ -16,9 +17,45 @@ export const LS_PORT = Number(process.env.LS_PORT || 53317);
 const MC_ADDR = '224.0.0.167';
 const MC_PORT = 53317;
 const ALIAS = process.env.LS_ALIAS || 'KoncetCloud';
-const FINGERPRINT = process.env.LS_FINGERPRINT || crypto.randomBytes(16).toString('hex');
 const STAGING = process.env.LS_STAGING || path.join(process.cwd(), 'ls-staging');
 const DEST = process.env.LS_DEST || 'gdrive3:Backup HP';
+
+// Fingerprint PERSISTEN: kalau berubah tiap restart, HP menganggap device
+// berubah dan sering hilang dari daftar. Simpan ke file supaya identitas sama
+// meski server restart.
+const FINGERPRINT_FILE = process.env.LS_FINGERPRINT_FILE || path.join(process.cwd(), 'ls-fingerprint.txt');
+function loadFingerprint() {
+  if (process.env.LS_FINGERPRINT) return process.env.LS_FINGERPRINT;
+  try {
+    const existing = fs.readFileSync(FINGERPRINT_FILE, 'utf8').trim();
+    if (existing) return existing;
+  } catch {
+    /* file belum ada */
+  }
+  const fresh = crypto.randomBytes(16).toString('hex');
+  try {
+    fs.writeFileSync(FINGERPRINT_FILE, fresh, { mode: 0o600 });
+  } catch {
+    /* non-fatal */
+  }
+  return fresh;
+}
+const FINGERPRINT = loadFingerprint();
+
+/** IP LAN pertama (Wi-Fi disukai) untuk multicast — Windows butuh interface
+ *  eksplisit, kalau dibiarkan sering salah pilih adapter virtual. */
+function lanIp() {
+  if (process.env.LS_LAN_IP) return process.env.LS_LAN_IP;
+  const nets = os.networkInterfaces();
+  const v4 = [];
+  for (const list of Object.values(nets)) {
+    for (const ni of list || []) {
+      if (ni.family === 'IPv4' && !ni.internal) v4.push(ni.address);
+    }
+  }
+  const priv = v4.find((a) => /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(a));
+  return priv || v4[0] || '0.0.0.0';
+}
 // Foto HP sering bernama sama (IMG_0001.HEIC berulang). Simpan per tanggal
 // lokal supaya tidak saling menimpa, plus cek nama unik di dalam folder itu.
 const DEST_DATED = (process.env.LS_DEST_DATED || '1') !== '0';
@@ -412,6 +449,7 @@ export function startLocalSend({ rc, audit }) {
   server.on('error', (e) => console.error('LocalSend receiver error:', e.message));
 
   // --- Discovery UDP multicast ---
+  const ip = lanIp();
   const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   sock.on('error', (e) => console.error('LocalSend discovery error:', e.message));
   sock.on('message', (msg, rinfo) => {
@@ -424,22 +462,42 @@ export function startLocalSend({ rc, audit }) {
     if (!info || info.fingerprint === FINGERPRINT) return;
     if (info.announce) replyToAnnounce(info, rinfo.address, sock);
   });
+
+  /** Kirim announce ke grup multicast dari interface LAN yang benar. */
+  function announce() {
+    try {
+      const hello = Buffer.from(JSON.stringify(deviceInfo(true)));
+      sock.send(hello, 0, hello.length, MC_PORT, MC_ADDR, () => {});
+    } catch (e) {
+      console.error('gagal announce:', e.message);
+    }
+  }
+
   try {
-    sock.bind(MC_PORT, () => {
+    sock.bind({ port: MC_PORT, address: '0.0.0.0', exclusive: false }, () => {
       try {
-        sock.addMembership(MC_ADDR);
+        sock.addMembership(MC_ADDR, ip); // terima multicast di interface LAN
       } catch (e) {
         console.error('gagal join multicast:', e.message);
       }
-      // Umumkan keberadaan kita sekali di awal.
-      const hello = Buffer.from(JSON.stringify(deviceInfo(true)));
-      sock.send(hello, 0, hello.length, MC_PORT, MC_ADDR);
+      try {
+        sock.setMulticastInterface(ip); // kirim multicast lewat interface LAN
+        sock.setMulticastTTL(2);
+      } catch (e) {
+        console.error('gagal set interface multicast:', e.message);
+      }
+      announce();
+      // Ulangi berkala: HP yang baru buka app / habis pindah jaringan tetap
+      // menemukan kita tanpa perlu restart server.
+      const beat = setInterval(announce, 10 * 1000);
+      if (beat.unref) beat.unref();
+      console.log(`LocalSend discovery di ${ip}:${MC_PORT} (grup ${MC_ADDR})`);
     });
   } catch (e) {
     console.error('gagal bind discovery:', e.message);
   }
 
-  audit('localsend_start', `receiver di port ${LS_PORT} -> ${DEST}`, true, null);
+  audit('localsend_start', `receiver di port ${LS_PORT} (${ip}) -> ${DEST}`, true, null);
 
   // Sapu sesi basi secara berkala (sender hilang tanpa cancel).
   const sweep = setInterval(() => cleanupStale(), 5 * 60 * 1000);
