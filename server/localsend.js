@@ -18,7 +18,31 @@ const MC_ADDR = '224.0.0.167';
 const MC_PORT = 53317;
 const ALIAS = process.env.LS_ALIAS || 'KoncetCloud';
 const STAGING = process.env.LS_STAGING || path.join(process.cwd(), 'ls-staging');
-const DEST = process.env.LS_DEST || 'gdrive3:Backup HP';
+const DEFAULT_DEST = process.env.LS_DEST || 'gdrive3:Backup HP';
+
+// Tujuan disimpan di file config dan DIBACA ULANG setiap transfer, supaya
+// ganti tujuan cukup edit file (tanpa restart server).
+const LS_CONFIG_FILE = process.env.LS_CONFIG_FILE || path.join(process.cwd(), 'ls-config.json');
+
+function currentDest() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(LS_CONFIG_FILE, 'utf8'));
+    const d = String(cfg?.dest || '').trim();
+    // harus berbentuk "remote:folder" (remote tanpa spasi di depan titik dua)
+    if (/^[A-Za-z0-9._-]+:/.test(d)) return d;
+  } catch {
+    /* file belum ada / JSON rusak: pakai default */
+  }
+  return DEFAULT_DEST;
+}
+
+/** Simpan tujuan ke config (dipakai juga oleh endpoint web nanti). */
+export function setDest(dest) {
+  const d = String(dest || '').trim();
+  if (!/^[A-Za-z0-9._-]+:/.test(d)) throw new Error('tujuan tidak valid (contoh: gdrive:Backup HP)');
+  fs.writeFileSync(LS_CONFIG_FILE, JSON.stringify({ dest: d }, null, 2) + '\n');
+  return d;
+}
 
 // Fingerprint PERSISTEN: kalau berubah tiap restart, HP menganggap device
 // berubah dan sering hilang dari daftar. Simpan ke file supaya identitas sama
@@ -246,6 +270,7 @@ function localDateKey(d = new Date()) {
  *  DIPERTAHANKAN supaya bisa di-retry tanpa minta HP kirim ulang. */
 async function pushSession(s, rc, audit) {
   const dir = path.join(STAGING, s.id);
+  const DEST = currentDest(); // dibaca ulang tiap transfer: ganti config tanpa restart
   const fsRoot = DEST_DATED ? `${DEST}/${localDateKey()}` : DEST;
   const success = [];
   const failed = [];
@@ -444,7 +469,7 @@ export function startLocalSend({ rc, audit }) {
   const server = http.createServer((req, res) => handleRequest(req, res, { rc, audit }));
   server.on('clientError', (_e, socket) => socket.destroy());
   server.listen(LS_PORT, '0.0.0.0', () => {
-    console.log(`LocalSend receiver siap: http://<ip-lan>:${LS_PORT} (alias: ${ALIAS} -> ${DEST})`);
+    console.log(`LocalSend receiver siap: http://<ip-lan>:${LS_PORT} (alias: ${ALIAS} -> ${currentDest()})`);
   });
   server.on('error', (e) => console.error('LocalSend receiver error:', e.message));
 
@@ -497,7 +522,7 @@ export function startLocalSend({ rc, audit }) {
     console.error('gagal bind discovery:', e.message);
   }
 
-  audit('localsend_start', `receiver di port ${LS_PORT} (${ip}) -> ${DEST}`, true, null);
+  audit('localsend_start', `receiver di port ${LS_PORT} (${ip}) -> ${currentDest()}`, true, null);
 
   // Sapu sesi basi secara berkala (sender hilang tanpa cancel).
   const sweep = setInterval(() => cleanupStale(), 5 * 60 * 1000);
@@ -506,4 +531,4 @@ export function startLocalSend({ rc, audit }) {
   return { server, sock };
 }
 
-export { DEST as LS_DEST, STAGING as LS_STAGING };
+export { STAGING as LS_STAGING, currentDest as LS_DEST, setDest as LS_SET_DEST };

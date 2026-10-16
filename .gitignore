@@ -18,6 +18,7 @@ server/logs/
 server/staging/
 server/ls-staging/
 server/ls-fingerprint.txt
+server/ls-config.json
 _shots/
 _ui-backup/
 _ref/
