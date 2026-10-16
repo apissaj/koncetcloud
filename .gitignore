@@ -16,6 +16,7 @@ web/node_modules/
 logs/
 server/logs/
 server/staging/
+server/ls-staging/
 _shots/
 _ui-backup/
 _ref/

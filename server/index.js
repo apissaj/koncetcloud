@@ -41,6 +41,7 @@ import {
   resolveAccount,
 } from './platforms.js';
 import { mountPhoneUpload } from './phoneupload.js';
+import { startLocalSend } from './localsend.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RC = process.env.RC_ADDR || 'http://127.0.0.1:5572';
@@ -754,6 +755,19 @@ mountPhoneUpload(app, {
   adminOnly,
   audit,
   isValidRemote: (name) => /^[A-Za-z0-9._-]+$/.test(name),
+});
+
+// Receiver LocalSend: HP kirim foto/video langsung ke server ini (1 hop),
+// lalu file otomatis didorong ke remote lewat rclone.
+startLocalSend({
+  rc,
+  audit: (action, detail, ok, ip) => audit(
+    { headers: {}, socket: { remoteAddress: ip }, ip },
+    action,
+    detail,
+    ok,
+    'localsend',
+  ),
 });
 
 const dist = path.join(__dirname, '..', 'web', 'dist');
