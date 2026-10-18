@@ -42,6 +42,7 @@ import {
 } from './platforms.js';
 import { mountPhoneUpload } from './phoneupload.js';
 import { getTransferState, startLocalSend } from './localsend.js';
+import { parseFsName, fsRemoteName, assertSafeRemotePath } from './validate.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RC = process.env.RC_ADDR || 'http://127.0.0.1:5572';
@@ -95,6 +96,19 @@ async function rc(method, params = {}, timeoutMs = 0) {
   return data;
 }
 
+// `fs` dari klien HARUS remote yang terdaftar di rclone. Tanpa ini, string apa pun
+// (path lokal seperti "C:/Windows" atau backend on-the-fly ":memory:") diterima
+// rclone dan --rc-serve menyajikannya -> klien login bisa baca/tulis file server.
+// Validasi bentuk ada di ./validate.js; di sini ditambah cek ke daftar remote rclone.
+async function assertRemoteFs(rawFs) {
+  const fsName = parseFsName(rawFs);
+  const { remotes } = await rc('config/listremotes');
+  if (!(remotes || []).map(String).includes(fsRemoteName(fsName))) {
+    throw Object.assign(new Error(`remote "${fsRemoteName(fsName)}" tidak terdaftar`), { httpStatus: 400 });
+  }
+  return fsName;
+}
+
 // --- Kunci anti-dobel ---------------------------------------------------
 // Dua `sync/copy` ke tujuan yang sama secara bersamaan bikin Google Drive
 // menyimpan dua file bernama sama (Drive mengizinkan nama duplikat, beda dari
@@ -126,29 +140,41 @@ function releaseRun(jobId) {
 // Kunci bisa nyangkut kalau UI tidak polling lagi atau job mati tanpa terpantau.
 // Selaraskan dengan kenyataan di rclone sebelum menolak permintaan run.
 async function reconcile(job) {
-  if (!job.lastRun || job.lastRun.status !== 'running') return;
+  const last = job.lastRun;
+  if (!last || last.jobid == null) return;
+  // Hanya status yang bisa berarti job masih hidup yang perlu diverifikasi ke rclone.
+  if (last.status !== 'running' && last.status !== 'interrupted') return;
   const lock = activeRunFor(job.id);
-  const jobid = lock?.jobid ?? job.lastRun.jobid;
-  if (jobid == null) {
-    if (lock) releaseRun(job.id);
-    job.lastRun.status = 'interrupted';
+  const jobid = lock?.jobid ?? last.jobid;
+  let st;
+  try {
+    st = await rc('job/status', { jobid });
+  } catch (e) {
+    // "job not found" = definitif: rclone tidak lagi mengenal jobid ini.
+    if (/job not found/i.test(e.message)) {
+      releaseRun(job.id);
+      last.status = 'interrupted';
+      last.error = last.error || 'Job berhenti tanpa terpantau (rclone tidak mengenali jobid).';
+      saveJobs(jobs);
+    }
+    // Error lain (jaringan/timeout RC): JANGAN lepas kunci atau ubah status.
+    // Melepas di sini bisa membuka celah duplikat saat job sebenarnya masih hidup.
+    return;
+  }
+  if (st.finished) {
+    releaseRun(job.id);
+    last.status = st.success ? 'done' : 'failed';
+    last.error = st.success ? null : (st.error || last.error);
+    last.finishedAt = new Date().toISOString();
     saveJobs(jobs);
     return;
   }
-  try {
-    const st = await rc('job/status', { jobid });
-    if (st.finished) {
-      releaseRun(job.id);
-      job.lastRun.status = st.success ? 'done' : 'failed';
-      job.lastRun.error = st.error || job.lastRun.error;
-      job.lastRun.finishedAt = new Date().toISOString();
-      saveJobs(jobs);
-    }
-  } catch {
-    // rclone sudah tidak mengenal jobid ini (proses sebelumnya mati)
-    releaseRun(job.id);
-    job.lastRun.status = 'interrupted';
-    job.lastRun.error = job.lastRun.error || 'Job berhenti tanpa terpantau (rclone tidak mengenali jobid).';
+  // Masih hidup: rehidrasi kunci anti-dobel supaya run baru (job ini atau ke dest
+  // sama) ditolak 409, walau status di disk sempat 'interrupted' karena restart.
+  if (!lock) activeRuns.set(job.id, { jobid, dest: job.dest, startedAt: last.startedAt });
+  if (last.status !== 'running') {
+    last.status = 'running';
+    last.error = null;
     saveJobs(jobs);
   }
 }
@@ -488,10 +514,15 @@ app.post('/api/platforms/disconnect', adminOnly, async (req, res) => {
 });
 
 app.get('/api/files', authed, async (req, res) => {
-  const fsName = String(req.query.fs || '');
-  const p = String(req.query.path || '');
+  let fsName;
+  let p;
+  try {
+    fsName = await assertRemoteFs(req.query.fs);
+    p = assertSafeRemotePath(req.query.path);
+  } catch (e) {
+    return res.status(e.httpStatus || 500).json({ error: e.message });
+  }
   const search = String(req.query.search || '').trim().toLowerCase();
-  if (!fsName) return res.status(400).json({ error: 'fs wajib diisi' });
   try {
     const data = await rc('operations/list', { fs: fsName, remote: p });
     // Pemilik ditampilkan di kolom "Pemilik". Diambil sekali per request
@@ -522,8 +553,16 @@ app.get('/api/files', authed, async (req, res) => {
 });
 
 app.post('/api/mkdir', adminOnly, async (req, res) => {
-  const { fs: fsName, path: p } = req.body || {};
-  if (!fsName || !p) return res.status(400).json({ error: 'fs dan path wajib' });
+  const { fs: rawFs, path: rawPath } = req.body || {};
+  let fsName;
+  let p;
+  try {
+    fsName = await assertRemoteFs(rawFs);
+    p = assertSafeRemotePath(rawPath);
+    if (!p) throw Object.assign(new Error('fs dan path wajib'), { httpStatus: 400 });
+  } catch (e) {
+    return res.status(e.httpStatus || 500).json({ error: e.message });
+  }
   try {
     await rc('operations/mkdir', { fs: fsName, remote: p });
     audit(req, 'mkdir', `${fsName}${p}`, true);
@@ -535,8 +574,18 @@ app.post('/api/mkdir', adminOnly, async (req, res) => {
 });
 
 app.post('/api/rename', adminOnly, async (req, res) => {
-  const { fs: fsName, from, to } = req.body || {};
-  if (!fsName || !from || !to) return res.status(400).json({ error: 'fs, from, to wajib' });
+  const { fs: rawFs, from: rawFrom, to: rawTo } = req.body || {};
+  let fsName;
+  let from;
+  let to;
+  try {
+    fsName = await assertRemoteFs(rawFs);
+    from = assertSafeRemotePath(rawFrom);
+    to = assertSafeRemotePath(rawTo);
+    if (!from || !to) throw Object.assign(new Error('fs, from, to wajib'), { httpStatus: 400 });
+  } catch (e) {
+    return res.status(e.httpStatus || 500).json({ error: e.message });
+  }
   try {
     await rc('operations/movefile', { srcFs: fsName, srcRemote: from, dstFs: fsName, dstRemote: to });
     audit(req, 'rename', `${fsName}${from} -> ${to}`, true);
@@ -548,8 +597,16 @@ app.post('/api/rename', adminOnly, async (req, res) => {
 });
 
 app.post('/api/delete', adminOnly, async (req, res) => {
-  const { fs: fsName, path: p, dir } = req.body || {};
-  if (!fsName || !p) return res.status(400).json({ error: 'fs dan path wajib' });
+  const { fs: rawFs, path: rawPath, dir } = req.body || {};
+  let fsName;
+  let p;
+  try {
+    fsName = await assertRemoteFs(rawFs);
+    p = assertSafeRemotePath(rawPath);
+    if (!p) throw Object.assign(new Error('fs dan path wajib'), { httpStatus: 400 });
+  } catch (e) {
+    return res.status(e.httpStatus || 500).json({ error: e.message });
+  }
   try {
     if (dir) await rc('operations/purge', { fs: fsName, remote: p });
     else await rc('operations/deletefile', { fs: fsName, remote: p });
@@ -563,10 +620,16 @@ app.post('/api/delete', adminOnly, async (req, res) => {
 
 // Streams the file straight from rclone's built-in web server (--rc-serve),
 // so previews and downloads never pass through this process or touch disk.
-app.get('/api/download', authed, (req, res) => {
-  const fsName = String(req.query.fs || '');
-  const p = String(req.query.path || '');
-  if (!fsName || !p) return res.status(400).json({ error: 'fs dan path wajib' });
+app.get('/api/download', authed, async (req, res) => {
+  let fsName;
+  let p;
+  try {
+    fsName = await assertRemoteFs(req.query.fs);
+    p = assertSafeRemotePath(req.query.path);
+    if (!p) throw Object.assign(new Error('fs dan path wajib'), { httpStatus: 400 });
+  } catch (e) {
+    return res.status(e.httpStatus || 500).json({ error: e.message });
+  }
   audit(req, 'download', `${fsName}${p}`, true);
   const name = path.basename(p).replace(/"/g, '');
   if (req.query.raw !== '1') {
@@ -709,7 +772,20 @@ app.post('/api/jobs/:id/stop', adminOnly, async (req, res) => {
   try {
     await rc('job/stop', { jobid });
   } catch (e) {
-    // Job bisa sudah selesai sendiri; tetap lepaskan kunci.
+    // Gagal menghentikan: cek dulu apakah job benar-benar sudah berhenti sendiri.
+    // Kalau masih hidup (atau status tak bisa dipastikan), JANGAN lepas kunci —
+    // melepasnya bisa membuka dua job menulis ke dest yang sama (risiko duplikat).
+    let stillAlive = true;
+    try {
+      const st = await rc('job/status', { jobid });
+      stillAlive = !st.finished;
+    } catch {
+      stillAlive = true; // ragu = anggap masih hidup (fail-closed)
+    }
+    if (stillAlive) {
+      audit(req, 'job_stop', `nama=${job.name} (gagal dihentikan)`, false);
+      return res.status(502).json({ error: 'Gagal menghentikan job di rclone; kunci dipertahankan. Coba lagi.' });
+    }
   }
   releaseRun(job.id);
   job.lastRun = { ...(job.lastRun || {}), status: 'stopped', finishedAt: new Date().toISOString() };
