@@ -17,6 +17,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
       - name: Cek sintaks server
         run: |
           node --check server/index.js
@@ -24,7 +27,7 @@ jobs:
           node --check server/platforms.js
           node --check server/validate.js
       - name: Unit test server
-        run: node --test server/
+        run: node --test server/*.test.js
       - name: Install & build frontend
         working-directory: web
         run: |
