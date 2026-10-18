@@ -66,19 +66,27 @@ function loadFingerprint() {
 }
 const FINGERPRINT = loadFingerprint();
 
-/** IP LAN pertama (Wi-Fi disukai) untuk multicast — Windows butuh interface
- *  eksplisit, kalau dibiarkan sering salah pilih adapter virtual. */
+/** IP LAN untuk multicast — Windows butuh interface eksplisit. LEwati adapter
+ *  VPN/virtual (CloudflareWARP, Tailscale, wintun, dll): multicast lewat mereka
+ *  masuk tunnel, bukan LAN fisik, sehingga HP tidak menemukan receiver. */
 function lanIp() {
   if (process.env.LS_LAN_IP) return process.env.LS_LAN_IP;
   const nets = os.networkInterfaces();
   const v4 = [];
-  for (const list of Object.values(nets)) {
+  for (const [iface, list] of Object.entries(nets)) {
     for (const ni of list || []) {
-      if (ni.family === 'IPv4' && !ni.internal) v4.push(ni.address);
+      if (ni.family === 'IPv4' && !ni.internal) v4.push({ iface, address: ni.address });
     }
   }
-  const priv = v4.find((a) => /^192\.168\.|^10\.|^172\.(1[6-9]|2\d|3[01])\./.test(a));
-  return priv || v4[0] || '0.0.0.0';
+  const vpnish = /warp|tailscale|\btun\b|tab|vpn|wireguard|virtual|hyper-v|iclip|docker|loopback/i;
+  const pool = v4.filter((e) => !vpnish.test(e.iface));
+  const real = pool.length ? pool : v4;
+  // Preferensi urutan: 192.168.x, lalu 10.x, lalu 172.(16-31).x
+  const pick =
+    real.find((e) => /^192\.168\./.test(e.address)) ||
+    real.find((e) => /^10\./.test(e.address)) ||
+    real.find((e) => /^172\.(1[6-9]|2\d|3[01])\./.test(e.address));
+  return pick ? pick.address : real[0] ? real[0].address : '0.0.0.0';
 }
 // Foto HP sering bernama sama (IMG_0001.HEIC berulang). Simpan per tanggal
 // lokal supaya tidak saling menimpa, plus cek nama unik di dalam folder itu.
