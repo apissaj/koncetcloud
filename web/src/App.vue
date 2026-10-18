@@ -10,7 +10,7 @@ import AccountsPanel from './components/AccountsPanel.vue';
 import UsersPanel from './components/UsersPanel.vue';
 import SecurityPanel from './components/SecurityPanel.vue';
 import AuditPanel from './components/AuditPanel.vue';
-import PhoneBackup from './components/PhoneBackup.vue';
+import TransferMonitor from './components/TransferMonitor.vue';
 import LoginView from './components/LoginView.vue';
 
 const view = ref('drive');
@@ -26,8 +26,8 @@ const currentUser = ref(null); // { username, role }
 const isAdmin = computed(() => currentUser.value?.role === 'admin');
 const sessionError = ref('');
 
-const VIEW_HASH = { home: 'beranda', drive: 'drive', jobs: 'backup', hp: 'hp', quota: 'penyimpanan', accounts: 'akun', users: 'pengguna', audit: 'riwayat', security: 'keamanan' };
-const HASH_VIEW = { beranda: 'home', drive: 'drive', berkas: 'drive', backup: 'jobs', hp: 'hp', penyimpanan: 'quota', kapasitas: 'quota', akun: 'accounts', pengguna: 'users', riwayat: 'audit', keamanan: 'security' };
+const VIEW_HASH = { home: 'beranda', drive: 'drive', jobs: 'backup', transfer: 'transfer', quota: 'penyimpanan', accounts: 'akun', users: 'pengguna', audit: 'riwayat', security: 'keamanan' };
+const HASH_VIEW = { beranda: 'home', drive: 'drive', berkas: 'drive', backup: 'jobs', transfer: 'transfer', penyimpanan: 'quota', kapasitas: 'quota', akun: 'accounts', pengguna: 'users', riwayat: 'audit', keamanan: 'security' };
 
 async function api(url, opts) {
   const r = await fetch(url, opts);
@@ -251,7 +251,7 @@ onMounted(async () => {
     />
 
     <BackupJobs v-else-if="view === 'jobs'" :role="currentUser?.role" />
-    <PhoneBackup v-else-if="view === 'hp' && isAdmin" />
+    <TransferMonitor v-else-if="view === 'transfer' && isAdmin" />
 
     <UsersPanel v-else-if="view === 'users' && isAdmin" :current-user="currentUser" />
     <AuditPanel v-else-if="view === 'audit' && isAdmin" />

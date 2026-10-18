@@ -88,6 +88,71 @@ const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 
 const sessions = new Map(); // sessionId -> { id, createdAt, files: Map, ip }
 
+// State progres transfer LIVE, hanya di memori (reset saat restart). Satu sesi
+// aktif pada satu waktu (dijaga activeSession()), jadi satu objek cukup. Dipakai
+// endpoint GET /api/phone/status untuk view #transfer.
+const transferState = {
+  phase: 'idle', // idle | receiving | pushing | done | failed
+  startedAt: null,
+  finishedAt: null,
+  sessionId: null,
+  sender: { alias: null, ip: null },
+  dest: null,
+  totalFiles: 0,
+  totalBytes: 0,
+  receivedFiles: 0,
+  receivedBytes: 0,
+  pushedFiles: 0,
+  failedFiles: 0,
+  currentFile: null,
+  history: [], // maks 5 entri transfer selesai
+};
+
+function resetTransferState(id, alias, ip, totalFiles, totalBytes, dest) {
+  transferState.phase = 'receiving';
+  transferState.startedAt = new Date().toISOString();
+  transferState.finishedAt = null;
+  transferState.sessionId = id;
+  transferState.sender = { alias: alias || 'perangkat', ip: ip || null };
+  transferState.dest = dest;
+  transferState.totalFiles = totalFiles;
+  transferState.totalBytes = totalBytes;
+  transferState.receivedFiles = 0;
+  transferState.receivedBytes = 0;
+  transferState.pushedFiles = 0;
+  transferState.failedFiles = 0;
+  transferState.currentFile = null;
+}
+
+function pushTransferHistory() {
+  transferState.history.unshift({
+    finishedAt: transferState.finishedAt,
+    totalFiles: transferState.totalFiles,
+    totalBytes: transferState.totalBytes,
+    pushedFiles: transferState.pushedFiles,
+    failedFiles: transferState.failedFiles,
+    dest: transferState.dest,
+    senderAlias: transferState.sender?.alias || null,
+    phase: transferState.phase,
+  });
+  if (transferState.history.length > 5) transferState.history.length = 5;
+}
+
+/** Snapshot state transfer untuk endpoint status. */
+export function getTransferState() {
+  // Sesi "sedang menerima/mendorong" bisa hilang tanpa jejak (dibatalkan,
+  // basi, atau sesi dibersihkan): turunkan ke idle supaya UI tidak menampilkan
+  // progres yang sudah mati. Sesi yang sudah 'done'/'failed' tidak disentuh
+  // agar bell & riwayat tetap bisa menampilkannya sesaat setelah selesai.
+  if (
+    (transferState.phase === 'receiving' || transferState.phase === 'pushing') &&
+    !sessions.has(transferState.sessionId)
+  ) {
+    transferState.phase = 'idle';
+  }
+  return transferState;
+}
+
 /** POST JSON ke perangkat LAN. Khusus HTTPS: sertifikat LocalSend self-signed,
  * jadi verifikasi dilewati HANYA untuk panggilan ini (bukan global proses). */
 function postJsonLan(urlStr, obj) {
@@ -272,9 +337,16 @@ async function pushSession(s, rc, audit) {
   const dir = path.join(STAGING, s.id);
   const DEST = currentDest(); // dibaca ulang tiap transfer: ganti config tanpa restart
   const fsRoot = DEST_DATED ? `${DEST}/${localDateKey()}` : DEST;
+  // Tulis state HANYA kalau sesi ini masih sesi "current". Sesi baru bisa masuk
+  // selagi sesi lama masih mendorong (semua file sesi lama sudah `done`, jadi
+  // activeSession() melepasnya). Tanpa guard ini, state sesi baru bisa dicemari
+  // oleh penulisan sesi lama yang belum selesai.
+  const isCurrent = () => transferState.sessionId === s.id;
+  if (isCurrent()) transferState.phase = 'pushing';
   const success = [];
   const failed = [];
   for (const f of s.files.values()) {
+    if (isCurrent()) transferState.currentFile = f.name;
     const srcPath = path.join(dir, f.name);
     let lastErr = null;
     for (let attempt = 1; attempt <= 2; attempt++) {
@@ -294,6 +366,14 @@ async function pushSession(s, rc, audit) {
       audit('localsend_upload', `${f.name}: ${lastErr.message}`, false, s.ip);
       failed.push(f.name);
     }
+  }
+  if (isCurrent()) {
+    transferState.currentFile = null;
+    transferState.pushedFiles += success.length;
+    transferState.failedFiles += failed.length;
+    transferState.finishedAt = new Date().toISOString();
+    transferState.phase = failed.length ? 'failed' : 'done';
+    pushTransferHistory();
   }
   if (!failed.length) {
     removeSession(s.id); // semua sukses: hapus staging sesi
@@ -388,6 +468,7 @@ function handleRequest(req, res, ctx) {
 
         fs.mkdirSync(path.join(STAGING, id), { recursive: true });
         sessions.set(id, { id, createdAt: Date.now(), files: map, ip });
+        resetTransferState(id, body?.info?.alias, ip, map.size, total, currentDest());
         audit('localsend_prepare', `${map.size} file dari ${body?.info?.alias || 'perangkat'} (${total} byte)`, true, ip);
         return sendJson(res, 200, { sessionId: id, files: tokens });
       })
@@ -414,6 +495,7 @@ function handleRequest(req, res, ctx) {
     req.on('data', (c) => {
       received += c.length;
       if (hash) hash.update(c);
+      if (transferState.sessionId === sid) transferState.receivedBytes += c.length;
       if (received > f.size) {
         aborted = true;
         out.destroy();
@@ -440,10 +522,22 @@ function handleRequest(req, res, ctx) {
         return;
       }
       f.done = true;
+      if (transferState.sessionId === sid) transferState.receivedFiles += 1;
       sendEmpty(res, 200);
       // Sesi lengkap? dorong ke remote.
       if ([...s.files.values()].every((x) => x.done)) {
-        pushSession(s, rc, audit).catch(() => removeSession(s.id));
+        pushSession(s, rc, audit).catch(() => {
+          // Kegagalan tak terduga (di luar penanganan per-file): catat sebagai
+          // 'failed' dulu supaya state tidak macet di 'pushing' dan tetap muncul
+          // di bell/riwayat, baru bersihkan staging.
+          if (transferState.sessionId === s.id) {
+            transferState.currentFile = null;
+            transferState.finishedAt = new Date().toISOString();
+            transferState.phase = 'failed';
+            pushTransferHistory();
+          }
+          removeSession(s.id);
+        });
       }
     }).on('error', () => {
       sendEmpty(res, 500);

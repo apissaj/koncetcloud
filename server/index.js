@@ -41,7 +41,7 @@ import {
   resolveAccount,
 } from './platforms.js';
 import { mountPhoneUpload } from './phoneupload.js';
-import { startLocalSend } from './localsend.js';
+import { getTransferState, startLocalSend } from './localsend.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const RC = process.env.RC_ADDR || 'http://127.0.0.1:5572';
@@ -70,13 +70,17 @@ for (const j of jobs) {
 }
 if (jobs.some((j) => j.lastRun?.status === 'interrupted')) saveJobs(jobs);
 
-async function rc(method, params = {}) {
+async function rc(method, params = {}, timeoutMs = 0) {
   const body = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null) continue;
     body.append(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
   }
-  const res = await fetch(`${RC}/${method}`, { method: 'POST', body });
+  const opts = { method: 'POST', body };
+  if (timeoutMs > 0 && typeof AbortSignal !== 'undefined' && AbortSignal.timeout) {
+    opts.signal = AbortSignal.timeout(timeoutMs);
+  }
+  const res = await fetch(`${RC}/${method}`, opts);
   const text = await res.text();
   let data;
   try {
@@ -744,6 +748,92 @@ app.get('/api/jobs/:id/progress', authed, async (req, res) => {
       saveJobs(jobs);
     }
     res.json({ job, progress: { ...st, stats } });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// --- Progres transfer LocalSend live (view #transfer) --------------------
+// Ruang kosong tujuan di-cache: `operations/about` lambat (1,5-6 detik per
+// remote), jadi TIDAK boleh dipanggil tiap polling (UI poll tiap 2 detik).
+// Refresh berjalan di latar belakang; respons selalu memakai cache lama/null
+// supaya endpoint tak pernah memblokir.
+const DEST_FREE_TTL_MS = 60 * 1000;
+let destFreeCache = { dest: null, ts: 0, value: null, refreshing: false };
+
+function cachedDestFree(dest) {
+  if (!dest) return null;
+  const now = Date.now();
+  if (destFreeCache.dest === dest && now - destFreeCache.ts < DEST_FREE_TTL_MS) {
+    return destFreeCache.value;
+  }
+  if (!destFreeCache.refreshing) {
+    destFreeCache.refreshing = true;
+    rc('operations/about', { fs: dest }, 10000)
+      .then((a) => {
+        destFreeCache = { dest, ts: Date.now(), value: a?.free ?? null, refreshing: false };
+      })
+      .catch(() => {
+        destFreeCache.refreshing = false;
+      });
+  }
+  return destFreeCache.dest === dest ? destFreeCache.value : null;
+}
+
+// Ringkasan kecepatan rclone (`core/stats`) juga di-cache di latar belakang.
+// Panggilan ini murni in-memory dan cepat, tapi tetap TIDAK di-await di jalur
+// request supaya endpoint dijamin cepat walau daemon rclone sedang tersendat
+// (permintaan yang menggantung tidak boleh menumpuk tiap 2 detik).
+let rcStatsCache = { ts: 0, value: null, refreshing: false };
+function cachedRcStats() {
+  const now = Date.now();
+  if (rcStatsCache.value && now - rcStatsCache.ts < 1500) return rcStatsCache.value;
+  if (!rcStatsCache.refreshing) {
+    rcStatsCache.refreshing = true;
+    rc('core/stats', {}, 5000)
+      .then((s) => {
+        rcStatsCache = { ts: Date.now(), value: s, refreshing: false };
+      })
+      .catch(() => {
+        rcStatsCache.refreshing = false;
+      });
+  }
+  return rcStatsCache.value;
+}
+
+app.get('/api/phone/status', adminOnly, async (_req, res) => {
+  try {
+    const st = getTransferState();
+    const live = {
+      phase: st.phase,
+      dest: st.dest,
+      totalFiles: st.totalFiles,
+      totalBytes: st.totalBytes,
+      receivedFiles: st.receivedFiles,
+      receivedBytes: st.receivedBytes,
+      pushedFiles: st.pushedFiles,
+      failedFiles: st.failedFiles,
+      currentFile: st.currentFile,
+      startedAt: st.startedAt,
+      finishedAt: st.finishedAt,
+      sender: st.sender,
+      rclone: null,
+    };
+    // Hanya saat fase mendorong ke cloud kita baca core/stats (via cache latar
+    // belakang supaya request tak pernah menunggu RC).
+    if (st.phase === 'pushing') {
+      const stats = cachedRcStats();
+      if (stats && typeof stats === 'object') {
+        const xfer = Array.isArray(stats.transferring) ? stats.transferring : [];
+        live.rclone = {
+          active: xfer.length > 0,
+          speed: stats.speed || 0,
+          eta: Number.isFinite(stats.eta) ? Math.round(stats.eta) : null,
+          errors: stats.errors || 0,
+        };
+      }
+    }
+    res.json({ live, history: st.history, destFree: cachedDestFree(st.dest) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

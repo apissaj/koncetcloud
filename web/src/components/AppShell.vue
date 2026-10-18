@@ -94,6 +94,38 @@ async function loadNotif() {
     /* biarkan: peringatan kapasitas opsional */
   }
 
+// Item transfer dari HP (LocalSend). Ditampilkan hanya kalau transfer sedang
+  // aktif ATAU baru selesai (kurang dari 1 jam), supaya bell tidak dipenuhi
+  // entri lama dari transfer hari-hari sebelumnya. Endpoint admin-only, jadi
+  // blok ini hanya dijalankan untuk admin.
+  if (props.user?.role === 'admin') {
+    try {
+      const r3 = await fetch('/api/phone/status', tmo());
+      if (r3.status !== 401) {
+        const d3 = await r3.json();
+        const st = d3.live;
+        const active = st && (st.phase === 'receiving' || st.phase === 'pushing');
+        const recent = st && st.finishedAt && Date.now() - new Date(st.finishedAt).getTime() < 3600000;
+        if (st && st.phase !== 'idle' && (active || recent)) {
+          const rx = Number(st.receivedBytes) || 0;
+          const mbText = `${(rx / 1e6).toFixed(rx >= 1e7 ? 0 : 1)} MB`;
+          if (st.phase === 'receiving') {
+            items.push({ kind: 'ok', text: `Transfer dari HP: ${st.receivedFiles}/${st.totalFiles} file diterima (${mbText}).` });
+          } else if (st.phase === 'pushing') {
+            items.push({ kind: 'ok', text: `Transfer dari HP: ${st.pushedFiles}/${st.totalFiles} file terkirim ke ${st.dest}.` });
+          } else if (st.phase === 'done' && st.failedFiles === 0) {
+            items.push({ kind: 'ok', text: `Transfer dari HP selesai (${st.totalFiles} file).` });
+          }
+          if (st.failedFiles > 0) {
+            items.push({ kind: 'warn', text: `Transfer dari HP: ${st.failedFiles} file gagal terkirim. Cek halaman Transfer.` });
+          }
+        }
+      }
+    } catch (e) {
+      /* 401 atau gagal: lewati saja, bell dari jobs sudah menangani sesi berakhir */
+    }
+  }
+
   notifItems.value = items;
   notifLoading.value = false;
 }
