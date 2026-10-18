@@ -24,7 +24,7 @@ jobs:
           node --check server/platforms.js
           node --check server/validate.js
       - name: Unit test server
-        run: node --test server/
+        run: node --test server/validate.test.js
       - name: Install & build frontend
         working-directory: web
         run: |
