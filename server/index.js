@@ -980,7 +980,11 @@ app.get('/api/phone/status', adminOnly, async (_req, res) => {
       if (stats && typeof stats === 'object') {
         const xfer = Array.isArray(stats.transferring) ? stats.transferring : [];
         live.rclone = {
-          active: xfer.length > 0,
+          // Fase 'pushing' = sesi sedang menulis ke cloud. `transferring[]` rclone
+          // sering KOSONG di jeda antar-file (stat + poll job), jadi jangan dipakai
+          // sebagai penanda aktif tunggal.
+          active: true,
+          transferring: xfer.length,
           speed: stats.speed || 0,
           eta: Number.isFinite(stats.eta) ? Math.round(stats.eta) : null,
           errors: stats.errors || 0,

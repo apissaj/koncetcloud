@@ -373,12 +373,15 @@ async function pushSession(s, rc, audit) {
     if (lastErr) {
       audit('localsend_upload', `${f.name}: ${lastErr.message}`, false, s.ip);
       failed.push(f.name);
+      // Naikkan per file (bukan hanya di akhir) supaya bar "Mengirim ke cloud"
+      // di UI bergerak selama push berjalan, bukan beku di 0 sampai seluruh batch selesai.
+      if (isCurrent()) transferState.failedFiles += 1;
+    } else if (isCurrent()) {
+      transferState.pushedFiles += 1;
     }
   }
   if (isCurrent()) {
     transferState.currentFile = null;
-    transferState.pushedFiles += success.length;
-    transferState.failedFiles += failed.length;
     transferState.finishedAt = new Date().toISOString();
     transferState.phase = failed.length ? 'failed' : 'done';
     pushTransferHistory();
