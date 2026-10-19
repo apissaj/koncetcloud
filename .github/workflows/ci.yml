@@ -23,8 +23,10 @@ jobs:
           node --check server/auth.js
           node --check server/platforms.js
           node --check server/validate.js
+          node --check server/localsend.js
+          node --check server/staging-cleanup.js
       - name: Unit test server
-        run: node --test server/validate.test.js
+        run: node --test server/validate.test.js server/staging-cleanup.test.js
       - name: Install & build frontend
         working-directory: web
         run: |

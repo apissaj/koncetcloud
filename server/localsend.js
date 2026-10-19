@@ -12,6 +12,7 @@ import http from 'node:http';
 import https from 'node:https';
 import dgram from 'node:dgram';
 import crypto from 'node:crypto';
+import { sweepFailedDir } from './staging-cleanup.js';
 
 export const LS_PORT = Number(process.env.LS_PORT || 53317);
 const MC_ADDR = '224.0.0.167';
@@ -632,6 +633,19 @@ export function startLocalSend({ rc, audit }) {
   // Sapu sesi basi secara berkala (sender hilang tanpa cancel).
   const sweep = setInterval(() => cleanupStale(), 5 * 60 * 1000);
   if (sweep.unref) sweep.unref();
+
+  // Sapu file gagal yang sudah basi (`ls-staging/failed`) supaya disk tidak
+  // menumpuk tanpa batas. Jalan sekali saat boot lalu berkala tiap 6 jam.
+  const failedDir = path.join(STAGING, 'failed');
+  const sweepFailed = () => {
+    const r = sweepFailedDir(failedDir, {
+      onAudit: (names, bytes) => audit('localsend_cleanup', `hapus ${names.length} file gagal basi (${bytes} byte)`, true, null),
+    });
+    if (r.removed) console.log(`LocalSend: bersihkan ${r.removed} file gagal basi (${r.freedBytes} byte)`);
+  };
+  sweepFailed();
+  const failedSweep = setInterval(sweepFailed, 6 * 60 * 60 * 1000);
+  if (failedSweep.unref) failedSweep.unref();
 
   return { server, sock };
 }

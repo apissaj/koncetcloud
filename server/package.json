@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "node --test"
+    "test": "node --test server/validate.test.js server/staging-cleanup.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
