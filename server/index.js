@@ -109,6 +109,37 @@ async function assertRemoteFs(rawFs) {
   return fsName;
 }
 
+// `dest` job WAJIB remote yang terdaftar di rclone — bukan path lokal seperti
+// "C:/..." (dest lokal bisa menulis ke disk server, melanggar invariant
+// control plane). Source boleh path lokal; hanya dest yang dicek.
+// Kembalian: 'form' (bentuk salah / diakhiri '/') | 'remote' (remote tak
+// terdaftar) | null (valid). Tidak pernah melempar; RC tak terjangkau dianggap
+// gagal-closed ('remote') supaya job tak dibuat/dijalankan tanpa kepastian.
+async function destProblem(dest) {
+  const raw = String(dest || '').trim();
+  if (!raw || raw.endsWith('/') || raw.endsWith('\\')) return 'form';
+  const i = raw.indexOf(':');
+  if (i <= 0) return 'form';
+  // Bagian "remote:" harus memenuhi parseFsName (menolak drive-letter "C:").
+  // Bagian "remote:" harus memenuhi parseFsName (menolak drive-letter "C:"),
+  // dan sisa path-nya harus lolos assertSafeRemotePath (tolak "..", absolut, "\").
+  try {
+    parseFsName(`${raw.slice(0, i + 1)}`);
+    assertSafeRemotePath(raw.slice(i + 1));
+  } catch {
+    return 'form';
+  }
+  const remoteName = raw.slice(0, i);
+  let remotes = [];
+  try {
+    const out = await rc('config/listremotes');
+    remotes = (out && out.remotes) || [];
+  } catch {
+    return 'remote'; // rclone tak terjangkau: gagal-closed
+  }
+  return remotes.map(String).includes(remoteName) ? null : 'remote';
+}
+
 // --- Kunci anti-dobel ---------------------------------------------------
 // Dua `sync/copy` ke tujuan yang sama secara bersamaan bikin Google Drive
 // menyimpan dua file bernama sama (Drive mengizinkan nama duplikat, beda dari
@@ -159,6 +190,16 @@ async function reconcile(job) {
     }
     // Error lain (jaringan/timeout RC): JANGAN lepas kunci atau ubah status.
     // Melepas di sini bisa membuka celah duplikat saat job sebenarnya masih hidup.
+    return;
+  }
+  // executeId BEDA = jobid ini dimiliki proses rclone lain (jobid reset dari 1
+  // tiap restart rclone). Job kita berasal dari proses lama yang sudah tidak ada,
+  // jadi kunci aman dilepas — ini kondisi NORMAL pasca-restart rclone, bukan error.
+  if (last.executeId && st.executeId && last.executeId !== st.executeId) {
+    releaseRun(job.id);
+    last.status = 'interrupted';
+    last.error = 'rclone dijalankan ulang setelah job ini mulai; job lama tidak dilanjutkan.';
+    saveJobs(jobs);
     return;
   }
   if (st.finished) {
@@ -639,14 +680,31 @@ app.get('/api/download', authed, async (req, res) => {
   res.redirect(302, `${RC}/[${fsName}]/${encoded}`);
 });
 
-app.get('/api/jobs', authed, async (_req, res) => {
-  await Promise.all(jobs.map((job) => reconcile(job)));
+app.get('/api/jobs', authed, async (req, res) => {
+  // Reconcile memutasi state (activeRuns/jobs.json) — hanya jalankan untuk admin;
+  // viewer cukup membaca apa adanya (tidak boleh memicu tulis dari request baca).
+  if (req.user?.role === 'admin') {
+    await Promise.all(jobs.map((job) => reconcile(job)));
+  }
   res.json({ jobs });
 });
 
-app.post('/api/jobs', adminOnly, (req, res) => {
+app.post('/api/jobs', adminOnly, async (req, res) => {
   const { name, source, dest } = req.body || {};
-  if (!source || !dest) return res.status(400).json({ error: 'source dan dest wajib diisi' });
+  if (!source || !dest) return res.status(400).json({ error: 'source dan dest wajib diisi', code: 'bad_request' });
+  try {
+    const problem = await destProblem(dest);
+    if (problem) {
+      return res.status(400).json({
+        error: problem === 'form'
+          ? 'Dest harus berbentuk remote, contoh: gdrive:Backup.'
+          : 'Dest harus remote rclone terdaftar (contoh: gdrive:Backup).',
+        code: 'bad_dest',
+      });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Dest harus berbentuk remote, contoh: gdrive:Backup.', code: 'bad_dest' });
+  }
   const job = {
     id: crypto.randomUUID(),
     name: name || path.basename(String(source).replace(/[\\/]+$/, '')) || 'Backup job',
@@ -672,7 +730,7 @@ app.delete('/api/jobs/:id', adminOnly, (req, res) => {
 
 // Buat job mirror dari template gdrive ke remote baru. HANYA membuat job,
 // tidak menjalankan. Dest yang sudah terdaftar dilewati.
-app.post('/api/jobs/mirror', adminOnly, (req, res) => {
+app.post('/api/jobs/mirror', adminOnly, async (req, res) => {
   const remote = String((req.body || {}).remote || '').trim();
   if (!remote) return res.status(400).json({ error: 'remote wajib diisi.', code: 'bad_request' });
   if (!isValidRemoteName(remote)) {
@@ -689,6 +747,16 @@ app.post('/api/jobs/mirror', adminOnly, (req, res) => {
     const dest = `${remote}:${suffix}`;
     const key = normDest(dest);
     if (seen.has(key)) {
+      skipped.push(dest);
+      continue;
+    }
+    // Hanya buat job kalau dest benar-benar remote terdaftar; selain itu skip.
+    try {
+      if (await destProblem(dest)) {
+        skipped.push(dest);
+        continue;
+      }
+    } catch {
       skipped.push(dest);
       continue;
     }
@@ -728,6 +796,16 @@ app.post('/api/jobs/:id/run', adminOnly, async (req, res) => {
     });
   }
 
+  // Validasi ulang dest (jobs.json bisa diedit di disk): dest harus remote
+  // terdaftar, bukan path lokal yang menulis ke disk server.
+  try {
+    if (await destProblem(job.dest)) {
+      return res.status(400).json({ error: 'Dest job tidak valid / remote tidak terdaftar.', code: 'bad_dest' });
+    }
+  } catch {
+    return res.status(400).json({ error: 'Dest job tidak valid / remote tidak terdaftar.', code: 'bad_dest' });
+  }
+
   // Kunci 2: job LAIN yang menulis ke tujuan sama sedang jalan?
   // Ini penyebab duplikat 7,4 GB: dua sync paralel ke tujuan yang sama.
   const clash = activeRunOnDest(job.dest);
@@ -749,7 +827,9 @@ app.post('/api/jobs/:id/run', adminOnly, async (req, res) => {
   try {
     const r = await rc('sync/copy', { srcFs: job.source, dstFs: job.dest, _async: 'true' });
     token.jobid = r.jobid;
-    job.lastRun = { startedAt: token.startedAt, jobid: r.jobid, status: 'running', error: null };
+    // executeId = UUID proses rclone; dipakai reconcile untuk mendeteksi jobid
+    // yang dipakai ulang job lain (jobid rclone reset dari 1 tiap restart).
+    job.lastRun = { startedAt: token.startedAt, jobid: r.jobid, executeId: r.executeId || null, status: 'running', error: null };
     saveJobs(jobs);
     audit(req, 'job_run', `nama=${job.name} tujuan=${job.dest}`, true);
     res.json({ job, jobid: r.jobid });
@@ -795,19 +875,17 @@ app.post('/api/jobs/:id/stop', adminOnly, async (req, res) => {
 });
 
 app.get('/api/jobs/:id/progress', authed, async (req, res) => {
-  const job = jobs.find((j) => j.id === req.params.id);
+  let job = jobs.find((j) => j.id === req.params.id);
   if (!job) return res.status(404).json({ error: 'job tidak ditemukan' });
   if (!job.lastRun || job.lastRun.jobid == null) return res.json({ job, progress: null });
-  // Kunci hilang karena restart server? Pulihkan dari status job rclone yang
-  // ternyata masih hidup, supaya job ini tetap kebal dari dobel.
-  if (!activeRunFor(job.id)) {
-    try {
-      const check = await rc('job/status', { jobid: job.lastRun.jobid });
-      if (!check.finished) activeRuns.set(job.id, { jobid: job.lastRun.jobid, dest: job.dest, startedAt: job.lastRun.startedAt });
-    } catch {
-      /* job sudah tidak ada di rclone */
-    }
-  }
+  // Selaraskan kunci/status dulu (rehidrasi kunci hilang, lepas kunci palsu yang
+  // jobid-nya sudah dipakai ulang job lain), lalu ambil job versi segar.
+  await reconcile(job);
+  job = jobs.find((j) => j.id === req.params.id) || job;
+  if (!job.lastRun || job.lastRun.jobid == null) return res.json({ job, progress: null });
+  // Jobid sudah dipakai ulang job lain (kunci palsu dilepas reconcile): jangan
+  // baca status jobid itu — akan melaporkan progres job yang tak terkait.
+  if (job.lastRun.status === 'interrupted') return res.json({ job, progress: null });
   try {
     const st = await rc('job/status', { jobid: job.lastRun.jobid });
     let stats = null;
