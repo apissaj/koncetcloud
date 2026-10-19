@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue';
 import { IconUserPlus, IconTrash, IconKey, IconShieldCheck, IconEye, IconLock, IconX } from '@tabler/icons-vue';
+import { apiFetch } from '../composables/useApi.js';
 import LoadingState from './LoadingState.vue';
 
 const props = defineProps({
@@ -24,10 +25,8 @@ const pwError = ref('');
 const pwBusy = ref(false);
 
 async function api(url, opts) {
-  const r = await fetch(url, opts);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
+  const r = await apiFetch(url, opts);
+  return r.json().catch(() => ({}));
 }
 
 async function load() {
@@ -38,7 +37,7 @@ async function load() {
     users.value = d.users || [];
   } catch (e) {
     error.value = e.message;
-    users.value = [];
+    if (e.message.includes('Sesi berakhir')) users.value = [];
   } finally {
     loading.value = false;
   }

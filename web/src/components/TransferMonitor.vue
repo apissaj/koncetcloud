@@ -12,6 +12,7 @@ import {
   IconRefresh,
 } from '@tabler/icons-vue';
 import { formatBytes } from '../composables/useFormatFile.js';
+import { apiFetch } from '../composables/useApi.js';
 import PhoneBackup from './PhoneBackup.vue';
 
 const data = ref(null);
@@ -88,13 +89,12 @@ async function load() {
   if (inflight) return;
   inflight = true;
   try {
-    const r = await fetch('/api/phone/status');
-    if (r.status === 401) throw new Error('Sesi berakhir. Masuk lagi.');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const r = await apiFetch('/api/phone/status');
     data.value = await r.json();
     error.value = '';
   } catch (e) {
     error.value = e.message;
+    if (e.message.includes('Sesi berakhir')) data.value = null;
   } finally {
     inflight = false;
     loading.value = false;

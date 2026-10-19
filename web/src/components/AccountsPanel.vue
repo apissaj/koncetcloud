@@ -16,6 +16,7 @@ import {
   IconX,
 } from '@tabler/icons-vue';
 import { formatBytes, providerIcon } from '../composables/useFormatFile.js';
+import { apiFetch } from '../composables/useApi.js';
 import LoadingState from './LoadingState.vue';
 import ConnectFormModal from './ConnectFormModal.vue';
 
@@ -46,15 +47,8 @@ const oauth = ref(null); // { platform, process, authUrl, status, error }
 let oauthTimer = null;
 
 async function api(url, opts) {
-  const r = await fetch(url, opts);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e = new Error(d.error || `HTTP ${r.status}`);
-    e.code = d.code;
-    e.status = r.status;
-    throw e;
-  }
-  return d;
+  const r = await apiFetch(url, opts);
+  return r.json().catch(() => ({}));
 }
 
 async function load() {
@@ -65,7 +59,7 @@ async function load() {
     platforms.value = d.platforms || [];
   } catch (e) {
     error.value = e.message;
-    platforms.value = [];
+    if (e.message.includes('Sesi berakhir')) platforms.value = [];
   } finally {
     loading.value = false;
   }
@@ -74,7 +68,7 @@ async function load() {
     const r = await api('/api/remotes');
     remotes.value = r.remotes || [];
   } catch (e) {
-    remotes.value = [];
+    if (e.message.includes('Sesi berakhir')) remotes.value = [];
   }
 }
 

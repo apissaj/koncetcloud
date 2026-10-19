@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { IconFolderPlus, IconX } from '@tabler/icons-vue';
+import { apiFetch } from '../composables/useApi.js';
 
 const props = defineProps({
   fs: { type: String, default: '' },
@@ -25,13 +26,11 @@ async function submit() {
   busy.value = true;
   error.value = '';
   try {
-    const r = await fetch('/api/mkdir', {
+    await apiFetch('/api/mkdir', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fs: props.fs, path: fullPath.value }),
     });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     emit('created');
   } catch (e) {
     error.value = e.message;

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { IconShieldCheck, IconShieldOff, IconDeviceMobile, IconCopy, IconCircleCheck } from '@tabler/icons-vue';
 import QRCode from 'qrcode';
+import { apiFetch } from '../composables/useApi.js';
 
 const props = defineProps({
   user: { type: Object, default: null },
@@ -26,10 +27,8 @@ const showDisable = ref(false);
 const copied = ref(false);
 
 async function api(url, opts) {
-  const r = await fetch(url, opts);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
+  const r = await apiFetch(url, opts);
+  return r.json().catch(() => ({}));
 }
 
 async function load() {

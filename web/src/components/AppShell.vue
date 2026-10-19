@@ -14,6 +14,7 @@ import {
   IconUser,
 } from '@tabler/icons-vue';
 import logoUrl from '../assets/logo.svg';
+import { apiFetch } from '../composables/useApi.js';
 import AppSidebar from './AppSidebar.vue';
 import AppSearch from './AppSearch.vue';
 import HelpModal from './HelpModal.vue';
@@ -56,8 +57,7 @@ async function loadNotif() {
   // berputar selamanya.
   const tmo = () => (AbortSignal.timeout ? { signal: AbortSignal.timeout(8000) } : {});
   try {
-    const r = await fetch('/api/jobs', tmo());
-    if (r.status === 401) throw new Error('Sesi berakhir. Masuk lagi.');
+    const r = await apiFetch('/api/jobs', tmo());
     const d = await r.json();
     for (const job of d.jobs || []) {
       const st = job.lastRun?.status;
@@ -76,7 +76,7 @@ async function loadNotif() {
 
   // Peringatan kapasitas untuk remote yang penuh atau over-quota.
   try {
-    const r2 = await fetch('/api/remotes', tmo());
+    const r2 = await apiFetch('/api/remotes', tmo());
     const d2 = await r2.json();
     for (const rem of d2.remotes || []) {
       if (!rem.ok || !rem.total) continue;
@@ -100,29 +100,27 @@ async function loadNotif() {
   // blok ini hanya dijalankan untuk admin.
   if (props.user?.role === 'admin') {
     try {
-      const r3 = await fetch('/api/phone/status', tmo());
-      if (r3.status !== 401) {
-        const d3 = await r3.json();
-        const st = d3.live;
-        const active = st && (st.phase === 'receiving' || st.phase === 'pushing');
-        const recent = st && st.finishedAt && Date.now() - new Date(st.finishedAt).getTime() < 3600000;
-        if (st && st.phase !== 'idle' && (active || recent)) {
-          const rx = Number(st.receivedBytes) || 0;
-          const mbText = `${(rx / 1e6).toFixed(rx >= 1e7 ? 0 : 1)} MB`;
-          if (st.phase === 'receiving') {
-            items.push({ kind: 'ok', text: `Transfer dari HP: ${st.receivedFiles}/${st.totalFiles} file diterima (${mbText}).` });
-          } else if (st.phase === 'pushing') {
-            items.push({ kind: 'ok', text: `Transfer dari HP: ${st.pushedFiles}/${st.totalFiles} file terkirim ke ${st.dest}.` });
-          } else if (st.phase === 'done' && st.failedFiles === 0) {
-            items.push({ kind: 'ok', text: `Transfer dari HP selesai (${st.totalFiles} file).` });
-          }
-          if (st.failedFiles > 0) {
-            items.push({ kind: 'warn', text: `Transfer dari HP: ${st.failedFiles} file gagal terkirim. Cek halaman Transfer.` });
-          }
+      const r3 = await apiFetch('/api/phone/status', tmo());
+      const d3 = await r3.json();
+      const st = d3.live;
+      const active = st && (st.phase === 'receiving' || st.phase === 'pushing');
+      const recent = st && st.finishedAt && Date.now() - new Date(st.finishedAt).getTime() < 3600000;
+      if (st && st.phase !== 'idle' && (active || recent)) {
+        const rx = Number(st.receivedBytes) || 0;
+        const mbText = `${(rx / 1e6).toFixed(rx >= 1e7 ? 0 : 1)} MB`;
+        if (st.phase === 'receiving') {
+          items.push({ kind: 'ok', text: `Transfer dari HP: ${st.receivedFiles}/${st.totalFiles} file diterima (${mbText}).` });
+        } else if (st.phase === 'pushing') {
+          items.push({ kind: 'ok', text: `Transfer dari HP: ${st.pushedFiles}/${st.totalFiles} file terkirim ke ${st.dest}.` });
+        } else if (st.phase === 'done' && st.failedFiles === 0) {
+          items.push({ kind: 'ok', text: `Transfer dari HP selesai (${st.totalFiles} file).` });
+        }
+        if (st.failedFiles > 0) {
+          items.push({ kind: 'warn', text: `Transfer dari HP: ${st.failedFiles} file gagal terkirim. Cek halaman Transfer.` });
         }
       }
     } catch (e) {
-      /* 401 atau gagal: lewati saja, bell dari jobs sudah menangani sesi berakhir */
+      /* gagal: lewati saja, bell dari jobs sudah menangani sesi berakhir */
     }
   }
 

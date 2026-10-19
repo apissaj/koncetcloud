@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { IconAlertTriangle, IconCircleCheck, IconHistory } from '@tabler/icons-vue';
+import { apiFetch } from '../composables/useApi.js';
 import LoadingState from './LoadingState.vue';
 
 const ACTIONS = {
@@ -32,10 +33,8 @@ const limit = 100;
 const offset = ref(0);
 
 async function api(url) {
-  const r = await fetch(url);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
+  const r = await apiFetch(url);
+  return r.json().catch(() => ({}));
 }
 
 function label(a) {
@@ -56,7 +55,10 @@ async function load() {
     total.value = d.total || 0;
   } catch (e) {
     error.value = e.message;
-    entries.value = [];
+    if (e.message.includes('Sesi berakhir')) {
+      entries.value = [];
+      total.value = 0;
+    }
   } finally {
     loading.value = false;
   }

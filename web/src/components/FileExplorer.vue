@@ -8,6 +8,7 @@ import {
 } from '@tabler/icons-vue';
 import { formatBytes } from '../composables/useFormatFile.js';
 import { getFileCategory } from '../composables/useFileType.js';
+import { apiFetch } from '../composables/useApi.js';
 import FileListHeader from './FileListHeader.vue';
 import FileListRow from './FileListRow.vue';
 import FileListGridCard from './FileListGridCard.vue';
@@ -40,7 +41,7 @@ const lastIndex = ref(-1);
 const menu = ref(null);
 const showNewFolder = ref(false);
 const detailFile = ref(null);
-const refreshKey = ref(0);
+let loadSeq = 0; // penjaga urutan: respons lama tidak boleh menimpa hasil terbaru
 
 watch(viewMode, (v) => {
   try { localStorage.setItem('omni-buddy-view', v); } catch (e) {}
@@ -81,21 +82,23 @@ const shown = computed(() => {
 });
 
 async function load() {
-  if (!props.fs) { items.value = []; return; }
+  if (!props.fs) { loadSeq++; items.value = []; return; }
+  const seq = ++loadSeq;
   loading.value = true;
   error.value = '';
   try {
     const params = new URLSearchParams({ fs: props.fs, path: props.path });
-    const r = await fetch(`/api/files?${params}`);
+    const r = await apiFetch(`/api/files?${params}`);
     const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    if (seq !== loadSeq) return; // respons lama dibuang
     items.value = d.items || [];
     emit('files-loaded', items.value);
   } catch (e) {
+    if (seq !== loadSeq) return;
     error.value = e.message;
-    items.value = [];
+    if (e.message.includes('Sesi berakhir')) items.value = [];
   } finally {
-    loading.value = false;
+    if (seq === loadSeq) loading.value = false;
   }
 }
 
@@ -149,13 +152,11 @@ async function actionRename() {
   const parent = item.path.split('/').slice(0, -1).join('/');
   const to = parent ? `${parent}/${next}` : next;
   try {
-    const r = await fetch('/api/rename', {
+    await apiFetch('/api/rename', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fs: props.fs, from: item.path, to }),
     });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     await load();
   } catch (e) {
     window.alert(`Gagal ubah nama: ${e.message}`);
@@ -168,13 +169,11 @@ async function actionDelete() {
   closeMenu();
   if (!window.confirm(`Hapus "${item.name}"? Aksi ini tidak bisa dibatalkan.`)) return;
   try {
-    const r = await fetch('/api/delete', {
+    await apiFetch('/api/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fs: props.fs, path: item.path, dir: item.dir }),
     });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     selected.value = selected.value.filter((p) => p !== item.path);
     await load();
   } catch (e) {
@@ -244,7 +243,7 @@ onMounted(load);
           class="grid size-9 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10"
           aria-label="Segarkan"
           title="Segarkan"
-          @click="() => { refreshKey++; load(); }"
+          @click="load"
         >
           <IconRefresh :size="20" :stroke="1.8" />
         </button>

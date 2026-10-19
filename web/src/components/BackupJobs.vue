@@ -9,6 +9,7 @@ import {
   IconTrash,
 } from '@tabler/icons-vue';
 import { formatBytes } from '../composables/useFormatFile.js';
+import { apiFetch } from '../composables/useApi.js';
 import LoadingState from './LoadingState.vue';
 
 const props = defineProps({
@@ -32,10 +33,8 @@ const runError = ref({});
 const timers = ref({});
 
 async function api(url, opts) {
-  const r = await fetch(url, opts);
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
+  const r = await apiFetch(url, opts);
+  return r.json().catch(() => ({}));
 }
 
 async function load() {
@@ -46,7 +45,7 @@ async function load() {
     jobs.value = d.jobs || [];
   } catch (e) {
     error.value = e.message;
-    jobs.value = [];
+    if (e.message.includes('Sesi berakhir')) jobs.value = [];
   } finally {
     loading.value = false;
   }
@@ -83,11 +82,7 @@ async function create() {
 async function remove(job) {
   if (!window.confirm(`Hapus job "${job.name}"? Berkas yang sudah tersalin tetap ada di drive.`)) return;
   try {
-    const r = await fetch(`/api/jobs/${encodeURIComponent(job.id)}`, { method: 'DELETE' });
-    if (!r.ok && r.status !== 204) {
-      const d = await r.json().catch(() => ({}));
-      throw new Error(d.error || `HTTP ${r.status}`);
-    }
+    await apiFetch(`/api/jobs/${encodeURIComponent(job.id)}`, { method: 'DELETE' });
     stopPoll(job.id);
     jobs.value = jobs.value.filter((j) => j.id !== job.id);
   } catch (e) {

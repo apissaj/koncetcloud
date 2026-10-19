@@ -3,6 +3,7 @@
 // server pindahkan ke remote cloud. Admin saja (menulis ke remote).
 import { computed, onMounted, ref } from 'vue';
 import { IconDeviceMobile, IconUpload, IconX, IconCircleCheck, IconAlertTriangle } from '@tabler/icons-vue';
+import { apiFetch } from '../composables/useApi.js';
 
 const remotes = ref([]);
 const remote = ref('');
@@ -29,9 +30,8 @@ async function loadRemotes() {
   loadError.value = '';
   loadingRemotes.value = true;
   try {
-    const r = await fetch('/api/phone/targets');
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const d = await r.json();
+    const r = await apiFetch('/api/phone/targets');
+    const d = await r.json().catch(() => ({}));
     remotes.value = d.remotes || [];
     if (!remote.value && remotes.value.length) remote.value = remotes.value[0].name;
   } catch (e) {
@@ -59,14 +59,12 @@ function removeOne(i) {
 }
 
 async function postJson(url, body) {
-  const r = await fetch(url, {
+  const r = await apiFetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
-  return d;
+  return r.json().catch(() => ({}));
 }
 
 async function uploadOne(item) {
@@ -81,7 +79,7 @@ async function uploadOne(item) {
   let offset = 0;
   while (offset < f.size) {
     if (cancelRequested.value) {
-      await fetch(`/api/phone/upload/${init.id}`, { method: 'DELETE' }).catch(() => {});
+      await apiFetch(`/api/phone/upload/${init.id}`, { method: 'DELETE' }).catch(() => {});
       throw new Error('Dibatalkan.');
     }
     const blob = f.slice(offset, Math.min(offset + chunk, f.size));
@@ -89,15 +87,11 @@ async function uploadOne(item) {
     let lastErr = '';
     for (let attempt = 1; attempt <= 3 && !ok; attempt++) {
       try {
-        const r = await fetch(`/api/phone/upload/${init.id}/chunk?offset=${offset}`, {
+        await apiFetch(`/api/phone/upload/${init.id}/chunk?offset=${offset}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/octet-stream' },
           body: blob,
         });
-        if (!r.ok) {
-          const d = await r.json().catch(() => ({}));
-          throw new Error(d.error || `HTTP ${r.status}`);
-        }
         ok = true;
       } catch (e) {
         lastErr = e.message;

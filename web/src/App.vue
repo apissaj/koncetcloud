@@ -60,6 +60,19 @@ async function onAuthed(user) {
   await loadStatus();
 }
 
+// Dipanggil saat ada respons 401 dari panel mana pun (via apiFetch). Verifikasi
+// ulang ke server (jangan percaya sinyal klien mentah); hanya turunkan UI kalau
+// server memang bilang sesi sudah tidak valid.
+async function onSessionExpired() {
+  await checkSession();
+  if (!authed.value) {
+    currentUser.value = null;
+    remotes.value = [];
+    rootFiles.value = [];
+    status.value = null;
+  }
+}
+
 async function logout() {
   try {
     await fetch('/api/logout', { method: 'POST' });
@@ -177,10 +190,16 @@ let buildTimer = null;
 onMounted(async () => {
   syncFromHash();
   window.addEventListener('hashchange', syncFromHash);
+  window.addEventListener('kc:unauthorized', onSessionExpired);
   await checkSession();
   if (authed.value) loadStatus();
   checkBuild();
   buildTimer = setInterval(checkBuild, 20000);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener('kc:unauthorized', onSessionExpired);
+  window.removeEventListener('hashchange', syncFromHash);
+  clearInterval(buildTimer);
 });
 </script>
 
