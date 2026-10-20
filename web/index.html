@@ -5,7 +5,10 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KoncetCloud</title>
-    <script>
+    <!-- Penanda nonce: server (Express) ganti __CSP_NONCE__ dengan nonce CSP
+         per-request saat menyajikan dist di produksi. Di dev Vite, biarkan apa
+         adanya (CSP tak berlaku di sana). Jangan ubah jadi <script> polos. -->
+    <script nonce="__CSP_NONCE__">
       // Terapkan tema sebelum paint supaya tidak berkedip.
       (function () {
         try {

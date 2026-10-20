@@ -252,8 +252,14 @@ const AUDIT_DIR = path.join(__dirname, 'logs');
 const AUDIT_FILE = path.join(AUDIT_DIR, 'audit.jsonl');
 
 function clientIp(req) {
-  const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-  return fwd || req.ip || req.socket?.remoteAddress || 'unknown';
+  // `trust proxy` = 'loopback', jadi req.trustProxy hanya true bila peer
+  // tepercaya (tunnel lokal). Kalau peer BUKAN loopback, abaikan XFF mentah
+  // supaya klien tak bisa memalsukan IP di audit log.
+  if (req.trustProxy) {
+    const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+    return fwd || req.ip || 'unknown';
+  }
+  return req.socket?.remoteAddress || req.ip || 'unknown';
 }
 
 /** Catat aksi ke audit. detail maksimum ~200 karakter; jangan pernah password. */
@@ -264,7 +270,9 @@ function audit(req, action, detail = null, ok = true, userOverride = null) {
       ts: new Date().toISOString(),
       user: userOverride || req?.user?.username || null,
       action,
-      detail: detail ? String(detail).slice(0, 200) : null,
+      // Buang karakter kontrol (newline/ANSI) dari input klien sebelum ditulis
+      // ke audit.jsonl supaya tidak bisa menyisipkan baris palsu.
+      detail: detail ? String(detail).replace(/[\x00-\x1f\x7f]/g, ' ').slice(0, 200) : null,
       ip: clientIp(req),
       ok: !!ok,
     });
@@ -283,12 +291,41 @@ app.use(express.json({ limit: '256kb' }));
 // sehingga flag Secure pada cookie sesi bisa dikendalikan penyerang.
 app.set('trust proxy', 'loopback');
 
-// Header keamanan dasar untuk semua respons.
-app.use((_req, res, next) => {
+// CSP per-request: nonce acak untuk satu-satunya script inline di index.html
+// (tema pra-paint). Nonce disimpan di res.locals agar penyaji index.html
+// bisa menyuntikkannya ke atribut <script nonce="...">.
+const CSP_NONCE_PLACEHOLDER = '__CSP_NONCE__';
+function setSecurityHeaders(res) {
+  const nonce = res.locals.cspNonce || crypto.randomBytes(16).toString('base64');
+  res.locals.cspNonce = nonce;
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // style-src 'unsafe-inline': Tailwind/Vue menulis style inline; jangan
+  // dihapus tanpa menguji UI. fonts.googleapis.com diizinkan karena
+  // web/src/style.css meng-@import Google Fonts (stylesheet eksternal);
+  // gstatic.com menyajikan file font-nya. Blob dipakai untuk unduhan lokal.
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      `script-src 'self' 'nonce-${nonce}'`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob:",
+      "connect-src 'self'",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  );
+}
+
+// Header keamanan dasar untuk semua respons.
+app.use((_req, res, next) => {
+  setSecurityHeaders(res);
   next();
 });
 
@@ -457,7 +494,8 @@ app.delete('/api/users/:username', requireAdmin(auth.record), (req, res) => {
 
 // --- Riwayat aksi (admin) ------------------------------------------------
 app.get('/api/audit', requireAdmin(auth.record), (req, res) => {
-  const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
+  // limit dijepit ke 1..500 (default 100) dan selalu bilangan bulat.
+  const limit = Math.min(500, Math.max(1, Math.floor(Number(req.query.limit) || 100)));
   // Paginasi: offset minimum 0, selalu bilangan bulat.
   const offset = Math.max(0, Math.floor(Number(req.query.offset) || 0));
   let entries = [];
@@ -515,6 +553,15 @@ const REMOTES_CACHE_TTL_MS = 60 * 1000;
 const REMOTES_ERROR_TTL_MS = 15 * 1000;
 const remoteAboutCache = new Map();  // name -> { ts, value, refreshing }
 const remoteConfigCache = new Map(); // name -> { ts, value, refreshing }
+
+// Buang cache remote yang dihapus/di-reconnect supaya /api/remotes tidak
+// menyajikan data (akun/kapasitas) LAMA sampai TTL habis.
+function invalidateRemoteCache(name) {
+  const key = String(name || '').trim();
+  if (!key) return;
+  remoteAboutCache.delete(key);
+  remoteConfigCache.delete(key);
+}
 
 // Config remote (murah, tapi tetap dipanggil tiap buka panel): cache juga.
 function cachedRemoteConfig(name) {
@@ -603,10 +650,14 @@ app.post('/api/platforms/connect', adminOnly, async (req, res) => {
   try {
     if (platform.auth === 'form') {
       const out = await connectForm({ rc, platform, remoteName, user, pass });
+      if (out.status < 400) invalidateRemoteCache(remoteName);
       audit(req, 'connect', `platform=${id} remote=${remoteName}`, out.status < 400);
       return res.status(out.status).json(out.body);
     }
     const out = await startOAuth({ rc, platform, remoteName });
+    // OAuth belum selesai di sini; cache tetap dibuang agar saat token jadi
+    // data lama tidak tampil. aman: nama remote sama.
+    if (out.status < 400) invalidateRemoteCache(remoteName);
     audit(req, 'connect', `platform=${id} remote=${remoteName} (oauth)`, out.status < 400);
     return res.status(out.status).json(out.body);
   } catch (e) {
@@ -626,6 +677,7 @@ app.post('/api/platforms/disconnect', adminOnly, async (req, res) => {
   const { remote } = req.body || {};
   try {
     const out = await disconnectRemote(rc, remote);
+    if (out.status < 400) invalidateRemoteCache(remote);
     audit(req, 'disconnect', `remote=${remote}`, out.status < 400);
     res.status(out.status).json(out.body);
   } catch (e) {
@@ -1115,10 +1167,31 @@ startLocalSend({
 
 const dist = path.join(__dirname, '..', 'web', 'dist');
 if (fs.existsSync(dist)) {
-  app.use(express.static(dist));
+  // index.html mentah di-cache; invalidasi saat mtime berubah (rebuild Vite).
+  let indexHtmlCache = { mtimeMs: -1, html: null };
+  function loadIndexHtml() {
+    const p = path.join(dist, 'index.html');
+    const { mtimeMs } = fs.statSync(p);
+    if (indexHtmlCache.html === null || indexHtmlCache.mtimeMs !== mtimeMs) {
+      // ganti penanda nonce dengan nilai per-request nanti; simpan bertanda dulu.
+      indexHtmlCache = { mtimeMs, html: fs.readFileSync(p, 'utf8') };
+    }
+    return indexHtmlCache.html;
+  }
+
+  // index: false -> '/' TIDAK dilayani static;推向 ke handler di bawah
+  // supaya nonce CSP ikut disuntik ke script inline.
+  app.use(express.static(dist, { index: false }));
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
-    res.sendFile(path.join(dist, 'index.html'));
+    // Suntikkan nonce CSP ke script inline (placeholder dari web/index.html)
+    // sebelum dikirim. Script eksternal (type="module" src=...) tak perlu nonce.
+    try {
+      const html = loadIndexHtml().replaceAll(CSP_NONCE_PLACEHOLDER, res.locals.cspNonce || '');
+      res.type('html').send(html);
+    } catch {
+      next();
+    }
   });
 }
 

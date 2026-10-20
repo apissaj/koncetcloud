@@ -151,7 +151,7 @@ function statusOf(job) {
   if (!job.lastRun) return { label: 'Belum jalan', cls: 'border-[#dadce0] bg-[#f1f3f4] text-[#5f6368] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300' };
   if (st === 'done') return { label: 'Selesai', cls: 'border-[#34a853]/35 bg-[#e6f4ea] text-[#137333] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300' };
   if (st === 'stopped') return { label: 'Dihentikan', cls: 'border-[#f9ab00]/45 bg-[#fef7e0] text-[#b06000] dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300' };
-  if (st === 'interrupted') return { label: 'Terputus', cls: 'border-[#f9ab00]/45 bg-[#fef7e0] text-[#c5221f] dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-red-300' };
+  if (st === 'interrupted') return { label: 'Terputus', cls: 'border-[#ea4335]/35 bg-[#fce8e6] text-[#c5221f] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300' };
   if (st === 'error' || st === 'failed') return { label: 'Gagal', cls: 'border-[#ea4335]/35 bg-[#fce8e6] text-[#c5221f] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300' };
   return { label: 'Belum jalan', cls: 'border-[#dadce0] bg-[#f1f3f4] text-[#5f6368] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300' };
 }
