@@ -247,12 +247,14 @@ async function startOauth(p) {
 
 function startOauthPoll() {
   stopOauthPoll();
+  if (!canWrite.value) return; // viewer tidak punya akses endpoint status OAuth
   pollOauth();
   oauthTimer = setInterval(pollOauth, 2000);
 }
 async function pollOauth() {
   const o = oauth.value;
   if (!o || !o.process || o.status === 'done' || o.status === 'failed') return;
+  if (!canWrite.value) return; // endpoint status OAuth admin-only
   const process = o.process;
   try {
     const d = await api(`/api/platforms/oauth/${encodeURIComponent(process)}`);

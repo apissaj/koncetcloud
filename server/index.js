@@ -202,6 +202,29 @@ async function reconcile(job) {
     saveJobs(jobs);
     return;
   }
+  // Job LAMA (mulai sebelum executeId disimpan) tak punya executeId, jadi kita
+  // tak bisa membuktikan jobid itu milik job kita. Tapi membrick-nya (lepas
+  // kunci + 'interrupted' setiap baca) justru mematikan kunci anti-dobel.
+  // Fail-closed yang SEIMBANG: kalau rclone mengonfirmasi job ini masih hidup,
+  // perlakukan seperti jalur normal (kunci di-rehidrasi, status 'running');
+  // kalau tidak, baru tandai 'interrupted'.
+  if (!last.executeId) {
+    if (st.finished) {
+      releaseRun(job.id);
+      last.status = st.success ? 'done' : 'failed';
+      last.error = st.success ? null : (st.error || last.error);
+      last.finishedAt = new Date().toISOString();
+      saveJobs(jobs);
+      return;
+    }
+    if (!lock) activeRuns.set(job.id, { jobid, dest: job.dest, startedAt: last.startedAt });
+    if (last.status !== 'running') {
+      last.status = 'running';
+      last.error = null;
+      saveJobs(jobs);
+    }
+    return;
+  }
   if (st.finished) {
     releaseRun(job.id);
     last.status = st.success ? 'done' : 'failed';
@@ -255,8 +278,10 @@ const app = express();
 // Tidak ada CORS terbuka: UI disajikan same-origin oleh server ini sendiri.
 app.use(express.json({ limit: '256kb' }));
 
-// Di belakang Cloudflare Tunnel: IP asli klien datang lewat header.
-app.set('trust proxy', true);
+// Hanya loopback yang dipercaya (server bind 127.0.0.1; tunnel cloudflared lokal).
+// Jangan pakai `true`: itu mempercayai X-Forwarded-Proto dari klien mana pun,
+// sehingga flag Secure pada cookie sesi bisa dikendalikan penyerang.
+app.set('trust proxy', 'loopback');
 
 // Header keamanan dasar untuk semua respons.
 app.use((_req, res, next) => {
@@ -433,6 +458,8 @@ app.delete('/api/users/:username', requireAdmin(auth.record), (req, res) => {
 // --- Riwayat aksi (admin) ------------------------------------------------
 app.get('/api/audit', requireAdmin(auth.record), (req, res) => {
   const limit = Math.min(500, Math.max(1, Number(req.query.limit) || 100));
+  // Paginasi: offset minimum 0, selalu bilangan bulat.
+  const offset = Math.max(0, Math.floor(Number(req.query.offset) || 0));
   let entries = [];
   try {
     const lines = fs.readFileSync(AUDIT_FILE, 'utf8').split('\n').filter(Boolean);
@@ -444,7 +471,7 @@ app.get('/api/audit', requireAdmin(auth.record), (req, res) => {
   }
   entries.reverse(); // terbaru dulu
   const total = entries.length;
-  entries = entries.slice(0, limit);
+  entries = entries.slice(offset, offset + limit);
   res.json({ entries, total });
 });
 
@@ -476,6 +503,60 @@ app.get('/api/status', authed, async (_req, res) => {
   }
 });
 
+// --- Cache data remote (dipakai /api/remotes) ---------------------------
+// `operations/about` itu lambat (1,5-6 detik per remote) sementara rute ini
+// dipanggil saat mount aplikasi, saat panel Akun dibuka, dan SETIAP kali
+// lonceng notifikasi dibuka. Jadi hasilnya di-cache per remote; refresh
+// berjalan di LATAR BELAKANG supaya respons selalu memakai nilai cache lama
+// dan request tidak pernah memblokir.
+const REMOTES_CACHE_TTL_MS = 60 * 1000;
+// Hasil GAGAL disimpan dengan TTL pendek: error tidak boleh "nyangkut"
+// 60 detik penuh (memang boleh, tapi tidak enak saat rclone pulih).
+const REMOTES_ERROR_TTL_MS = 15 * 1000;
+const remoteAboutCache = new Map();  // name -> { ts, value, refreshing }
+const remoteConfigCache = new Map(); // name -> { ts, value, refreshing }
+
+// Config remote (murah, tapi tetap dipanggil tiap buka panel): cache juga.
+function cachedRemoteConfig(name) {
+  const now = Date.now();
+  const hit = remoteConfigCache.get(name);
+  if (hit && now - hit.ts < REMOTES_CACHE_TTL_MS) return hit.value; // bisa null (gagal)
+  if (!hit || !hit.refreshing) {
+    remoteConfigCache.set(name, { ...(hit || {}), refreshing: true });
+    rc('config/get', { name })
+      .then((cfg) => remoteConfigCache.set(name, { ts: Date.now(), value: cfg, refreshing: false }))
+      .catch(() => remoteConfigCache.set(name, { ts: Date.now(), value: null, refreshing: false }));
+  }
+  return hit ? hit.value : null;
+}
+
+// Kapasitas remote: value = { ok:true, total, used, free, trashed, other }
+// atau { ok:false, error }.
+function cachedRemoteAbout(name) {
+  const now = Date.now();
+  const hit = remoteAboutCache.get(name);
+  const hasValue = hit && hit.value;
+  const ttl = hasValue && hit.value.ok === false ? REMOTES_ERROR_TTL_MS : REMOTES_CACHE_TTL_MS;
+  if (hasValue && now - hit.ts < ttl) return hit.value;
+  if (!hit || !hit.refreshing) {
+    remoteAboutCache.set(name, { ts: hit ? hit.ts : 0, value: hasValue ? hit.value : null, refreshing: true });
+    rc('operations/about', { fs: `${name}:` }, 15000)
+      .then((a) => remoteAboutCache.set(name, {
+        ts: Date.now(),
+        value: { ok: true, total: a.total, used: a.used, free: a.free, trashed: a.trashed, other: a.other },
+        refreshing: false,
+      }))
+      .catch((e) => remoteAboutCache.set(name, {
+        ts: Date.now(),
+        value: { ok: false, error: e.message },
+        refreshing: false,
+      }));
+  }
+  // Pakai nilai lama bila ada; kalau belum ada sama sekali, JANGAN kembalikan
+  // undefined (itu bikin pemanggil melempar). Kembalikan objek status yang jujur.
+  return hasValue ? hit.value : { ok: false, error: 'Data remote belum tersedia; coba lagi sebentar.' };
+}
+
 app.get('/api/remotes', authed, async (_req, res) => {
   try {
     const { remotes } = await rc('config/listremotes');
@@ -485,17 +566,16 @@ app.get('/api/remotes', authed, async (_req, res) => {
         // di UI selalu bisa menampilkan pemiliknya, bukan cuma remote utama.
         let account = null;
         try {
-          const cfg = await rc('config/get', { name });
+          const cfg = cachedRemoteConfig(name);
           if (cfg && Object.keys(cfg).length) account = await resolveAccount(name, cfg);
         } catch {
           /* config tak terbaca: account tetap null */
         }
-        try {
-          const a = await rc('operations/about', { fs: `${name}:` });
+        const a = cachedRemoteAbout(name);
+        if (a.ok) {
           return { name, ok: true, total: a.total, used: a.used, free: a.free, trashed: a.trashed, other: a.other, account };
-        } catch (e) {
-          return { name, ok: false, error: e.message, account };
         }
+        return { name, ok: false, error: a.error, account };
       }),
     );
     res.json({ remotes: out });
@@ -535,8 +615,8 @@ app.post('/api/platforms/connect', adminOnly, async (req, res) => {
   }
 });
 
-// Pantau status proses OAuth yang sedang berjalan.
-app.get('/api/platforms/oauth/:processId', authed, (req, res) => {
+// Pantau status proses OAuth yang sedang berjalan (hanya admin: berisi authUrl admin).
+app.get('/api/platforms/oauth/:processId', adminOnly, (req, res) => {
   const out = getOAuthStatus(req.params.processId);
   res.status(out.status).json(out.body);
 });
@@ -732,8 +812,12 @@ app.delete('/api/jobs/:id', adminOnly, (req, res) => {
 // tidak menjalankan. Dest yang sudah terdaftar dilewati.
 app.post('/api/jobs/mirror', adminOnly, async (req, res) => {
   const remote = String((req.body || {}).remote || '').trim();
-  if (!remote) return res.status(400).json({ error: 'remote wajib diisi.', code: 'bad_request' });
+  if (!remote) {
+    audit(req, 'job_mirror', 'gagal: remote kosong', false);
+    return res.status(400).json({ error: 'remote wajib diisi.', code: 'bad_request' });
+  }
   if (!isValidRemoteName(remote)) {
+    audit(req, 'job_mirror', `gagal: nama remote tidak valid (${remote.slice(0, 80)})`, false);
     return res.status(400).json({ error: 'Nama remote tidak valid.', code: 'bad_request' });
   }
   const prefix = 'gdrive:';
@@ -775,6 +859,8 @@ app.post('/api/jobs/mirror', adminOnly, async (req, res) => {
     created.push({ name: job.name, dest: job.dest });
   }
   if (created.length) saveJobs(jobs);
+  // Aksi pembuatan massal harus terekam; detail ringkas (audit memotong 200 char).
+  audit(req, 'job_mirror', `tujuan=${remote} dibuat=${created.length} dilewati=${skipped.length}`, true);
   res.json({ created, skipped });
 });
 
@@ -821,12 +907,15 @@ app.post('/api/jobs/:id/run', adminOnly, async (req, res) => {
   }
 
   // Ambil kunci SEBELUM await, supaya dua permintaan beruntun tidak lolos bersamaan.
-  const token = { jobid: null, dest: job.dest, startedAt: new Date().toISOString() };
+  // executeId ikut disimpan sedini mungkin: itu identitas proses rclone yang
+  // dipakai reconcile untuk mendeteksi jobid yang dipakai ulang proses lain.
+  const token = { jobid: null, executeId: null, dest: job.dest, startedAt: new Date().toISOString() };
   activeRuns.set(job.id, token);
 
   try {
     const r = await rc('sync/copy', { srcFs: job.source, dstFs: job.dest, _async: 'true' });
     token.jobid = r.jobid;
+    token.executeId = r.executeId || null;
     // executeId = UUID proses rclone; dipakai reconcile untuk mendeteksi jobid
     // yang dipakai ulang job lain (jobid rclone reset dari 1 tiap restart).
     job.lastRun = { startedAt: token.startedAt, jobid: r.jobid, executeId: r.executeId || null, status: 'running', error: null };
@@ -835,7 +924,9 @@ app.post('/api/jobs/:id/run', adminOnly, async (req, res) => {
     res.json({ job, jobid: r.jobid });
   } catch (e) {
     releaseRun(job.id); // gagal start: jangan tahan kunci
-    job.lastRun = { startedAt: token.startedAt, jobid: null, status: 'failed', error: e.message };
+    // lastRun gagal start juga memuat executeId (kalau rclone sempat menjawab),
+    // supaya reconcile tidak salah menganggap jobid milik job lain.
+    job.lastRun = { startedAt: token.startedAt, jobid: null, executeId: token.executeId, status: 'failed', error: e.message };
     saveJobs(jobs);
     res.status(500).json({ error: e.message, job });
   }
@@ -875,26 +966,30 @@ app.post('/api/jobs/:id/stop', adminOnly, async (req, res) => {
 });
 
 app.get('/api/jobs/:id/progress', authed, async (req, res) => {
+  const isAdmin = req.user?.role === 'admin';
   let job = jobs.find((j) => j.id === req.params.id);
   if (!job) return res.status(404).json({ error: 'job tidak ditemukan' });
   if (!job.lastRun || job.lastRun.jobid == null) return res.json({ job, progress: null });
-  // Selaraskan kunci/status dulu (rehidrasi kunci hilang, lepas kunci palsu yang
-  // jobid-nya sudah dipakai ulang job lain), lalu ambil job versi segar.
-  await reconcile(job);
-  job = jobs.find((j) => j.id === req.params.id) || job;
-  if (!job.lastRun || job.lastRun.jobid == null) return res.json({ job, progress: null });
+  // Sama seperti GET /api/jobs: reconcile memutasi state, jadi hanya admin yang
+  // menjalankannya. Viewer cukup membaca apa adanya.
+  if (isAdmin) {
+    // Selaraskan kunci/status dulu (rehidrasi kunci hilang, lepas kunci palsu yang
+    // jobid-nya sudah dipakai ulang job lain), lalu ambil job versi segar.
+    await reconcile(job);
+    job = jobs.find((j) => j.id === req.params.id) || job;
+    if (!job.lastRun || job.lastRun.jobid == null) return res.json({ job, progress: null });
+  } else if (job.lastRun.executeId == null) {
+    // Tanpa executeId, jobid tak bisa dibuktikan milik job ini (lihat reconcile).
+    return res.json({ job, progress: null });
+  }
   // Jobid sudah dipakai ulang job lain (kunci palsu dilepas reconcile): jangan
   // baca status jobid itu — akan melaporkan progres job yang tak terkait.
   if (job.lastRun.status === 'interrupted') return res.json({ job, progress: null });
   try {
     const st = await rc('job/status', { jobid: job.lastRun.jobid });
-    let stats = null;
-    try {
-      stats = await rc('core/stats');
-    } catch {
-      stats = null;
-    }
-    if (st.finished) {
+    // core/stats lewat cache latar belakang: request baca tak menunggu RC.
+    const stats = cachedRcStats();
+    if (st.finished && isAdmin) {
       job.lastRun.status = st.success ? 'done' : 'failed';
       job.lastRun.error = st.error || null;
       job.lastRun.finishedAt = new Date().toISOString();

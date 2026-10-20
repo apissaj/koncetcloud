@@ -217,7 +217,7 @@ function migrateOrCreate(raw) {
   writeRaw(data);
   fs.writeFileSync(
     PASSWORD_FILE,
-    `Password KoncetCloud (pengguna: admin)\n${password}\n\nUbah kapan saja:\nnode D:/omni-buddy/server/set-password.js\n`,
+    `Password KoncetCloud (pengguna: admin)\n${password}\n\nUbah kapan saja:\nnode server/set-password.js\n`,
     { mode: 0o600 },
   );
   return { data, created: true, migrated: false };
@@ -303,6 +303,14 @@ export function changePassword(record, username, nextPassword, { rotateSecret = 
     }
   }
   return { ok: true };
+}
+
+/** Set password admin dari CLI. Rotasi secret → SEMUA sesi lama mati. */
+export function setPassword(password, username = 'admin') {
+  const rec = ensureAuth();
+  const out = changePassword(rec.record, username, String(password), { rotateSecret: true });
+  if (out.error) throw new Error(out.error);
+  return out;
 }
 
 // --- 2FA: aktifkan / matikan ------------------------------------------------

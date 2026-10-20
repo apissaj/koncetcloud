@@ -1,6 +1,6 @@
 // Ubah password KoncetCloud dari terminal.
-//   node D:/omni-buddy/server/set-password.js            (mode interaktif, input tersembunyi)
-//   KC_PASSWORD="..." node D:/omni-buddy/server/set-password.js   (mode non-interaktif)
+//   node server/set-password.js            (mode interaktif, input tersembunyi)
+//   KC_PASSWORD="..." node server/set-password.js   (mode non-interaktif)
 // Password tidak pernah dicetak kembali ke layar.
 import readline from 'node:readline';
 import { setPassword, ensureAuth } from './auth.js';

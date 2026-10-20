@@ -63,11 +63,13 @@ export function formatBytes(value) {
 
 export function formatDate(value, locale = 'id-ID') {
   if (!value) return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat(locale, {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function getModifiedTime(file) {
