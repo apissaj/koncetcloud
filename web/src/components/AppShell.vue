@@ -15,6 +15,7 @@ import {
 } from '@tabler/icons-vue';
 import { apiFetch } from '../composables/useApi.js';
 import AppSidebar from './AppSidebar.vue';
+import BrandMark from './BrandMark.vue';
 import BrandWordmark from './BrandWordmark.vue';
 import AppSearch from './AppSearch.vue';
 import HelpModal from './HelpModal.vue';
@@ -189,8 +190,9 @@ onBeforeUnmount(() => {
         <button type="button" class="sg-control sg-hover grid size-10 shrink-0 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] lg:hidden" aria-label="Buka menu navigasi" @click.stop="isMobileNavOpen = !isMobileNavOpen">
           <IconMenu2 :size="22" :stroke="2" />
         </button>
-        <div class="hidden items-center gap-2 lg:flex">
-          <BrandWordmark :size="26" class="text-[var(--foreground)]" />
+        <div class="hidden items-center gap-2.5 lg:flex">
+          <BrandMark :size="30" class="shrink-0 text-[var(--foreground)]" />
+          <BrandWordmark :size="22" :lead="false" class="text-[var(--foreground)]" />
         </div>
         <span class="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] lg:hidden">
           <span class="size-2 rounded-full" :class="connected ? 'bg-[var(--success)]' : 'bg-[var(--destructive)]'"></span>

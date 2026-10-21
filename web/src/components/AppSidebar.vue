@@ -24,6 +24,7 @@ import {
   IconUserFilled,
 } from '@tabler/icons-vue';
 import { formatBytes } from '../composables/useFormatFile.js';
+import BrandMark from './BrandMark.vue';
 import BrandWordmark from './BrandWordmark.vue';
 
 const props = defineProps({
@@ -104,8 +105,9 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
   <nav class="flex h-full min-h-0 flex-col" aria-label="Navigasi utama">
     <!-- Zona 1: brand & aksi utama (tidak ikut scroll) -->
     <div class="flex shrink-0 flex-col gap-5 pb-4">
-      <div class="flex items-center gap-2 lg:hidden">
-        <BrandWordmark :size="24" class="text-[var(--foreground)]" />
+      <div class="flex items-center gap-2.5 lg:hidden">
+        <BrandMark :size="34" class="shrink-0 text-[var(--foreground)]" />
+        <BrandWordmark :size="22" :lead="false" class="text-[var(--foreground)]" />
       </div>
 
       <button

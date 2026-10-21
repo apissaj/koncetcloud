@@ -15,29 +15,35 @@
 // K sengaja lebih tebal (dia huruf mark, jangkar wordmark).
 //
 // fill="currentColor" -> otomatis ikut tema terang/gelap.
-const props = defineProps({ size: { type: Number, default: 26 } });
+import { computed } from 'vue';
+
+const props = defineProps({ size: { type: Number, default: 26 }, lead: { type: Boolean, default: true } });
 
 // viewBox 893 x 108.5 -> lebar harus proporsional terhadap tinggi, kalau tidak
 // preserveAspectRatio akan mengecilkan wordmark supaya muat di kotak persegi.
-const RATIO = 893 / 108.5;
-const width = () => Math.round(props.size * RATIO * 100) / 100;
+// Tanpa huruf K (lead=false) teks mulai di x=0 dan lebarannya 794.5 -> dipakai
+// bersama mark "Vault K" supaya huruf K tak kembar.
+const RATIO = computed(() => (props.lead ? 893 : 794.5) / 108.5);
+const VIEWBOX = computed(() => (props.lead ? '-1 -1.5 893 108.5' : '0 -1.5 794.5 108.5'));
+const TEXT_X = computed(() => (props.lead ? 99.465 : 0));
+const width = () => Math.round(props.size * RATIO.value * 100) / 100;
 </script>
 
 <template>
   <svg
     :width="width()"
     :height="size"
-    viewBox="-1 -1.5 893 108.5"
+    :viewBox="VIEWBOX"
     preserveAspectRatio="xMinYMid meet"
     role="img"
     aria-label="KoncetCloud"
     fill="currentColor"
   >
     <!-- K (path, bukan teks) - identik dengan K pada mark -->
-    <path d="M0 0H28V34L62 0H98L46 52L98 104H62L28 70V104H0Z" />
+    <path v-if="lead" d="M0 0H28V34L62 0H98L46 52L98 104H62L28 70V104H0Z" />
     <!-- "oncetCloud" - baseline y=104 sama dengan baseline K -->
     <text
-      x="99.465"
+      :x="TEXT_X"
       y="104"
       font-family="Plus Jakarta Sans, Arial, sans-serif"
       font-size="137.4"
