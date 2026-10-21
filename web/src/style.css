@@ -2,6 +2,145 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ---- Token Solid Glass (monokrom, tanpa blur) ---------------------------
+   Ditambahkan sebagai lapisan dasar. Belum dipakai komponen mana pun.
+   Sumber: deeplethe/solid-glass (MIT), jalur "opaque" karena tanpa blur. */
+:root {
+  --radius: 0.875rem;
+  --radius-control: 0.7rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  /* Halaman & tinta (monokrom) */
+  --background: oklch(0.925 0.007 265);
+  --foreground: oklch(0.16 0 0);
+  --card: oklch(0.958 0.005 265);
+  --card-foreground: oklch(0.16 0 0);
+  --popover: oklch(0.98 0.003 265);
+  --popover-foreground: oklch(0.16 0 0);
+  --panel: oklch(0.947 0.006 265);
+
+  --primary: oklch(0.2 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.3 0.02 265 / 9%);
+  --secondary-foreground: oklch(0.2 0 0);
+  --muted: oklch(0.3 0.02 265 / 7%);
+  --muted-foreground: oklch(0.47 0 0);
+  --accent: oklch(0.3 0.02 265 / 9%);
+  --accent-foreground: oklch(0.2 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.3 0.02 265 / 13%);
+  --input: oklch(0.3 0.02 265 / 15%);
+  --ring: oklch(0.7 0 0);
+
+  /* Finish: rim (garis cahaya atas), inner, edge, shade, contact, lift */
+  --glass-rim: oklch(1 0 0 / 90%);
+  --glass-inner: oklch(1 0 0 / 35%);
+  --glass-edge: oklch(0.38 0.03 265 / 10%);
+  --popover-edge: oklch(0.38 0.03 265 / 22%);
+  --popover-under: oklch(0.38 0.03 265 / 16%);
+  --glass-shade: oklch(0.3 0.06 265 / 28%);
+  --glass-contact: oklch(0.25 0.03 265 / 6%);
+  --glass-lift: oklch(0.25 0.03 265 / 14%);
+
+  /* Kaca bening (kontrol kecil) & "satu state" */
+  --glass-control: oklch(1 0 0 / 55%);
+  --glass-control-rim: oklch(1 0 0 / 80%);
+  --glass-state: oklch(0.3 0.02 265 / 9%);
+  --glass-state-rim: oklch(1 0 0 / 85%);
+  --glass-state-edge: oklch(0.3 0.02 265 / 13%);
+  --glass-state-armed: oklch(0.3 0.02 265 / 26%);
+  --hover: oklch(0.3 0.02 265 / 8%);
+  --hover-faint: oklch(0.3 0.02 265 / 4%);
+
+  /* Takik (track/checkbox): bayangan dibalik */
+  --well-shade: oklch(0.25 0.03 265 / 12%);
+  --well-rim: oklch(1 0 0 / 60%);
+
+  /* Field */
+  --field: oklch(1 0 0 / 55%);
+  --field-rim: oklch(1 0 0 / 70%);
+  --field-edge: oklch(0.3 0.02 265 / 15%);
+  --focus-line: oklch(0.2 0 0);
+
+  /* Tombol aksen (tinta monokrom): TANPA tembus karena tanpa blur */
+  --primary-solid: 100%;
+  --primary-rim: oklch(1 0 0 / 22%);
+  --primary-under: oklch(0 0 0 / 18%);
+  --primary-inner: oklch(0 0 0 / 6%);
+  --primary-edge: oklch(0.2 0 0 / 40%);
+
+  /* Status: hue DIPERBOLEHKAN untuk makna (running/selesai/berhenti) */
+  --status-running: oklch(0.55 0.19 258);
+  --status-done: oklch(0.47 0.14 155);
+  --status-interrupted: oklch(0.55 0.15 65);
+  --success: oklch(0.47 0.14 155);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: oklch(0.16 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.225 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.22 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --panel: oklch(0.19 0 0);
+
+  --primary: oklch(0.94 0 0);
+  --primary-foreground: oklch(0.18 0 0);
+  --secondary: oklch(1 0 0 / 10%);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(1 0 0 / 7%);
+  --muted-foreground: oklch(0.72 0 0);
+  --accent: oklch(1 0 0 / 8%);
+  --accent-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 13%);
+  --ring: oklch(0.52 0 0);
+
+  --glass-rim: oklch(1 0 0 / 16%);
+  --glass-inner: oklch(1 0 0 / 4%);
+  --glass-edge: oklch(1 0 0 / 6%);
+  --popover-edge: oklch(1 0 0 / 6%);
+  --popover-under: oklch(0 0 0 / 0%);
+  --glass-shade: oklch(0 0 0 / 60%);
+  --glass-contact: oklch(0 0 0 / 10%);
+  --glass-lift: oklch(0 0 0 / 22%);
+
+  --glass-control: oklch(1 0 0 / 7%);
+  --glass-control-rim: oklch(1 0 0 / 11%);
+  --glass-state: oklch(1 0 0 / 7%);
+  --glass-state-rim: oklch(1 0 0 / 11%);
+  --glass-state-edge: oklch(1 0 0 / 6%);
+  --glass-state-armed: oklch(1 0 0 / 11%);
+  --hover: oklch(1 0 0 / 8%);
+  --hover-faint: oklch(1 0 0 / 4%);
+
+  --well-shade: oklch(0 0 0 / 38%);
+  --well-rim: oklch(1 0 0 / 9%);
+
+  --field: oklch(1 0 0 / 6%);
+  --field-rim: oklch(1 0 0 / 15%);
+  --field-edge: oklch(1 0 0 / 8%);
+  --focus-line: oklch(1 0 0 / 40%);
+
+  --primary-rim: oklch(1 0 0);
+  --primary-under: oklch(0 0 0 / 22%);
+  --primary-inner: oklch(0 0 0 / 7%);
+  --primary-edge: oklch(1 0 0 / 26%);
+
+  --status-running: oklch(0.72 0.14 250);
+  --status-done: oklch(0.75 0.15 155);
+  --status-interrupted: oklch(0.8 0.13 80);
+  --success: oklch(0.75 0.15 155);
+}
+
 @layer base {
   html,
   body,
