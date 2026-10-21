@@ -84,10 +84,10 @@ onMounted(load);
 
 <template>
   <div class="flex flex-col gap-5">
-    <div class="rounded-[24px] bg-white p-5 dark:bg-slate-800 sm:p-7">
-      <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[#1a73e8] dark:text-sky-400">Riwayat</p>
-      <h1 class="text-[26px] font-medium text-[#202124] dark:text-slate-100">Riwayat aksi</h1>
-      <p class="mt-2 max-w-[720px] text-sm text-[#5f6368] dark:text-slate-400">
+    <div class="sg-card p-5 sm:p-7">
+      <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--primary)]">Riwayat</p>
+      <h1 class="text-[26px] font-medium text-[var(--foreground)]">Riwayat aksi</h1>
+      <p class="mt-2 max-w-[720px] text-sm text-[var(--muted-foreground)]">
         Catatan siapa melakukan apa: login, hapus, ubah nama, jalankan job, dan lainnya.
         Dicatat otomatis oleh server, tidak bisa diubah dari UI.
       </p>
@@ -95,22 +95,22 @@ onMounted(load);
 
     <LoadingState v-if="loading" message="Memuat riwayat..." />
 
-    <div v-else-if="error" class="rounded-[24px] border border-[#e0e3e7] bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
-      <p class="font-medium text-[#c5221f]">Riwayat tidak bisa dibaca</p>
-      <p class="mt-1 text-sm text-[#5f6368] dark:text-slate-400">{{ error }}</p>
-      <button type="button" class="mt-3 inline-flex h-10 items-center rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" @click="load">Coba lagi</button>
+    <div v-else-if="error" class="sg-card p-6">
+      <p class="font-medium text-[var(--destructive)]">Riwayat tidak bisa dibaca</p>
+      <p class="mt-1 text-sm text-[var(--muted-foreground)]">{{ error }}</p>
+      <button type="button" class="sg-control mt-3 inline-flex h-10 items-center px-5 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="load">Coba lagi</button>
     </div>
 
-    <div v-else-if="!entries.length" class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[#e0e3e7] py-14 text-center dark:border-slate-700">
-      <IconHistory :size="28" :stroke="1.5" class="text-[#5f6368] dark:text-slate-400" />
-      <p class="font-medium text-[#5f6368] dark:text-slate-300">Belum ada riwayat</p>
-      <p class="text-sm text-[#5f6368] dark:text-slate-400">Aksi yang dicatat akan muncul di sini.</p>
+    <div v-else-if="!entries.length" class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[var(--glass-edge)] py-14 text-center">
+      <IconHistory :size="28" :stroke="1.5" class="text-[var(--muted-foreground)]" />
+      <p class="font-medium text-[var(--muted-foreground)]">Belum ada riwayat</p>
+      <p class="text-sm text-[var(--muted-foreground)]">Aksi yang dicatat akan muncul di sini.</p>
     </div>
 
-    <div v-else class="overflow-hidden rounded-2xl border border-[#e8eaed] bg-white dark:border-slate-700 dark:bg-slate-800">
+    <div v-else class="sg-card overflow-hidden">
       <table class="w-full text-left text-sm">
         <thead>
-          <tr class="border-b border-[#e8eaed] bg-[#f8fafd] text-xs uppercase tracking-wide text-[#5f6368] dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-400">
+          <tr class="border-b border-[var(--border)] bg-[var(--muted)] text-xs uppercase tracking-wide text-[var(--muted-foreground)]">
             <th class="px-4 py-3 font-medium">Waktu</th>
             <th class="px-4 py-3 font-medium">Pengguna</th>
             <th class="px-4 py-3 font-medium">Aksi</th>
@@ -119,25 +119,25 @@ onMounted(load);
             <th class="px-4 py-3 font-medium">Status</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-[#eceff1] dark:divide-slate-700">
-          <tr v-for="(e, i) in entries" :key="i" class="align-top">
-            <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-[#5f6368] dark:text-slate-400">{{ fmtTs(e.ts) }}</td>
-            <td class="px-4 py-3 font-medium text-[#202124] dark:text-slate-100">{{ e.user || '(anonim)' }}</td>
+        <tbody>
+          <tr v-for="(e, i) in entries" :key="i" class="align-top border-b border-[var(--border)]">
+            <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-[var(--muted-foreground)]">{{ fmtTs(e.ts) }}</td>
+            <td class="px-4 py-3 font-medium text-[var(--foreground)]">{{ e.user || '(anonim)' }}</td>
             <td class="px-4 py-3">
               <span class="inline-flex items-center gap-1.5">
-                <IconAlertTriangle v-if="e.ok === false" :size="13" :stroke="2" class="shrink-0 text-[#ea4335]" />
-                <IconCircleCheck v-else :size="13" :stroke="2" class="shrink-0 text-[#34a853]" />
+                <IconAlertTriangle v-if="e.ok === false" :size="13" :stroke="2" class="shrink-0 text-[var(--destructive)]" />
+                <IconCircleCheck v-else :size="13" :stroke="2" class="shrink-0 text-[var(--success)]" />
                 {{ label(e.action) }}
               </span>
             </td>
-            <td class="hidden max-w-[320px] truncate px-4 py-3 text-xs text-[#5f6368] dark:text-slate-400 sm:table-cell" :title="e.detail || ''">{{ e.detail || '-' }}</td>
-            <td class="hidden px-4 py-3 font-mono text-xs text-[#5f6368] dark:text-slate-400 md:table-cell">{{ e.ip || '-' }}</td>
+            <td class="sg-popover hidden max-w-[320px] truncate px-3 py-2 text-xs text-[var(--muted-foreground)] sm:table-cell" :title="e.detail || ''">{{ e.detail || '-' }}</td>
+            <td class="hidden px-4 py-3 font-mono text-xs text-[var(--muted-foreground)] md:table-cell">{{ e.ip || '-' }}</td>
             <td class="px-4 py-3">
               <span
-                class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
+                class="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
                 :class="e.ok === false
-                  ? 'border-[#ea4335]/35 bg-[#fce8e6] text-[#c5221f] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300'
-                  : 'border-[#34a853]/35 bg-[#e6f4ea] text-[#137333] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300'"
+                  ? 'sg-control text-[var(--destructive)]'
+                  : 'sg-control text-[var(--success)]'"
               >{{ okLabel(e) }}</span>
             </td>
           </tr>
@@ -145,11 +145,11 @@ onMounted(load);
       </table>
     </div>
 
-    <div class="flex items-center justify-between px-1 text-sm text-[#5f6368] dark:text-slate-400">
+    <div class="flex items-center justify-between px-1 text-sm text-[var(--muted-foreground)]">
       <span>{{ total }} entri</span>
       <div class="flex gap-2">
-        <button type="button" class="inline-flex h-9 items-center rounded-full border border-[#dadce0] bg-white px-4 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" :disabled="offset <= 0" @click="prev">Sebelumnya</button>
-        <button type="button" class="inline-flex h-9 items-center rounded-full border border-[#dadce0] bg-white px-4 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" :disabled="offset + limit >= total" @click="next">Berikutnya</button>
+        <button type="button" class="sg-control inline-flex h-9 items-center px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-40" :disabled="offset <= 0" @click="prev">Sebelumnya</button>
+        <button type="button" class="sg-control inline-flex h-9 items-center px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-40" :disabled="offset + limit >= total" @click="next">Berikutnya</button>
       </div>
     </div>
   </div>

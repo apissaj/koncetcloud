@@ -104,15 +104,15 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
     <!-- Zona 1: brand & aksi utama (tidak ikut scroll) -->
     <div class="flex shrink-0 flex-col gap-5 pb-4">
       <div class="flex items-center gap-2 lg:hidden">
-        <span class="grid size-11 place-items-center rounded-2xl bg-white dark:bg-slate-900">
-          <IconCloudFilled :size="22" :stroke="0" class="text-[#1a73e8]" />
+        <span class="sg-control grid size-11 place-items-center">
+          <IconCloudFilled :size="22" :stroke="0" class="text-[var(--foreground)]" />
         </span>
-        <span class="text-lg font-semibold text-[#202124] dark:text-slate-100">KoncetCloud</span>
+        <span class="text-lg font-semibold text-[var(--foreground)]">KoncetCloud</span>
       </div>
 
       <button
         type="button"
-        class="inline-flex h-12 w-fit items-center gap-2 rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] transition hover:border-[#c7d2e0] hover:bg-[#f8fafd] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+        class="sg-primary inline-flex h-12 w-fit items-center gap-2 px-5 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
         @click="emit('view', 'jobs')"
       >
         <IconPlus :size="18" :stroke="2" />
@@ -126,10 +126,10 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
         <li v-for="item in mainNav" :key="item.id">
           <button
             type="button"
-            class="flex w-full items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-left text-sm transition"
+            class="flex w-full items-center gap-3.5 rounded-[var(--radius-control)] px-3.5 py-2.5 text-left text-sm transition"
             :class="isActive(item.id)
-              ? 'bg-[#e8f0fe] font-medium text-[#1967d2] dark:bg-sky-500/15 dark:text-sky-300'
-              : 'text-[#3c4043] hover:bg-black/[0.04] dark:text-slate-300 dark:hover:bg-white/5'"
+              ? 'sg-state font-medium text-[var(--foreground)]'
+              : 'sg-hover text-[var(--muted-foreground)]'"
             @click="emit('view', item.id)"
           >
             <component :is="isActive(item.id) ? item.activeIcon : item.icon" :size="20" :stroke="isActive(item.id) ? 0 : 1.8" />
@@ -139,15 +139,15 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
       </ul>
 
       <template v-if="adminNav.length">
-        <div class="mx-3.5 h-px bg-[#e8eaed] dark:bg-slate-700" aria-hidden="true" />
+        <div class="mx-3.5 h-px bg-[var(--glass-edge)]" aria-hidden="true" />
         <ul class="flex flex-col gap-0.5">
           <li v-for="item in adminNav" :key="item.id">
             <button
               type="button"
-              class="flex w-full items-center gap-3.5 rounded-xl px-3.5 py-2.5 text-left text-sm transition"
+              class="flex w-full items-center gap-3.5 rounded-[var(--radius-control)] px-3.5 py-2.5 text-left text-sm transition"
               :class="isActive(item.id)
-                ? 'bg-[#e8f0fe] font-medium text-[#1967d2] dark:bg-sky-500/15 dark:text-sky-300'
-                : 'text-[#3c4043] hover:bg-black/[0.04] dark:text-slate-300 dark:hover:bg-white/5'"
+                ? 'sg-state font-medium text-[var(--foreground)]'
+                : 'sg-hover text-[var(--muted-foreground)]'"
               @click="emit('view', item.id)"
             >
               <component :is="isActive(item.id) ? item.activeIcon : item.icon" :size="20" :stroke="isActive(item.id) ? 0 : 1.8" />
@@ -157,42 +157,42 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
         </ul>
       </template>
 
-      <div class="mx-3.5 h-px bg-[#e8eaed] dark:bg-slate-700" aria-hidden="true" />
+      <div class="mx-3.5 h-px bg-[var(--glass-edge)]" aria-hidden="true" />
       <div>
         <button
           type="button"
-          class="mb-1 flex w-full items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-left transition hover:bg-black/[0.04] dark:hover:bg-white/5"
+          class="sg-hover mb-1 flex w-full items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-left transition"
           :aria-expanded="!remotesCollapsed"
           @click="toggleCollapse"
         >
-          <component :is="remotesCollapsed ? IconChevronRight : IconChevronDown" :size="14" :stroke="2" class="shrink-0 text-[#5f6368] dark:text-slate-400" />
-          <span class="text-[11px] font-bold uppercase tracking-[0.08em] text-[#5f6368] dark:text-slate-400">Remote</span>
-          <span class="ml-auto rounded-full border border-[#dadce0] px-1.5 py-0.5 text-[10px] font-medium text-[#5f6368] dark:border-slate-600 dark:text-slate-400">{{ remotes.length }}</span>
+          <component :is="remotesCollapsed ? IconChevronRight : IconChevronDown" :size="14" :stroke="2" class="shrink-0 text-[var(--muted-foreground)]" />
+          <span class="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">Remote</span>
+          <span class="sg-control ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">{{ remotes.length }}</span>
         </button>
         <ul class="flex flex-col gap-0.5 pt-0.5">
           <li v-for="r in visibleRemotes" :key="r.name">
             <button
               type="button"
-              class="flex w-full items-center justify-between gap-2 rounded-xl px-3.5 py-2 text-left text-sm transition"
+              class="flex w-full items-center justify-between gap-2 rounded-[var(--radius-control)] px-3.5 py-2 text-left text-sm transition"
               :class="active === `${r.name}:` && currentSection === 'drive'
-                ? 'bg-[#e8f0fe] font-medium text-[#1967d2] dark:bg-sky-500/15 dark:text-sky-300'
-                : 'text-[#3c4043] hover:bg-black/[0.04] dark:text-slate-300 dark:hover:bg-white/5'"
+                ? 'sg-state font-medium text-[var(--foreground)]'
+                : 'sg-hover text-[var(--muted-foreground)]'"
               @click="emit('select-remote', r.name)"
             >
               <span class="flex min-w-0 items-center gap-3">
                 <IconCloud :size="18" :stroke="1.8" />
                 <span class="truncate">{{ r.name }}</span>
               </span>
-              <span v-if="!r.ok" class="shrink-0 text-[10px] text-[#ea4335]">error</span>
+              <span v-if="!r.ok" class="shrink-0 text-[10px] text-[var(--destructive)]">error</span>
             </button>
           </li>
-          <li v-if="!remotes.length" class="px-3.5 py-2 text-xs text-[#5f6368] dark:text-slate-400">
+          <li v-if="!remotes.length" class="px-3.5 py-2 text-xs text-[var(--muted-foreground)]">
             Belum ada remote rclone.
           </li>
           <li v-else-if="hiddenCount > 0">
             <button
               type="button"
-              class="w-full rounded-xl px-3.5 py-2 text-left text-xs font-medium text-[#1a73e8] transition hover:bg-[#e8f0fe]/60 dark:text-sky-300 dark:hover:bg-sky-500/10"
+              class="sg-hover w-full rounded-[var(--radius-control)] px-3.5 py-2 text-left text-xs font-medium text-[var(--foreground)] underline-offset-2 transition"
               @click="toggleCollapse"
             >
               +{{ hiddenCount }} remote lagi
@@ -203,19 +203,19 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
     </div>
 
     <!-- Zona 3: kartu Total (dipatok, tidak ikut scroll) -->
-    <div class="shrink-0 border-t border-[#e8eaed] pt-4 dark:border-slate-700">
-      <div class="rounded-2xl border border-[#e0e3e7] bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
+    <div class="shrink-0 border-t border-[var(--glass-edge)] pt-4">
+      <div class="sg-card p-4">
         <div class="mb-2 flex items-center justify-between">
-          <span class="flex items-center gap-2 text-sm font-medium text-[#202124] dark:text-slate-100">
-            <IconCloudFilled :size="18" :stroke="0" class="text-[#1a73e8]" />
+          <span class="flex items-center gap-2 text-sm font-medium text-[var(--foreground)]">
+            <IconCloudFilled :size="18" :stroke="0" class="text-[var(--muted-foreground)]" />
             Total
           </span>
-          <span class="text-sm font-semibold text-[#1a73e8] dark:text-sky-300">{{ percentLabel }}</span>
+          <span class="text-sm font-semibold text-[var(--foreground)]">{{ percentLabel }}</span>
         </div>
-        <div class="h-1.5 w-full overflow-hidden rounded-full bg-[#e8eaed] dark:bg-slate-700">
-          <div class="h-full rounded-full bg-[#1a73e8] dark:bg-sky-400" :style="{ width: `${percent}%` }" />
+        <div class="sg-groove h-1.5 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+          <div class="h-full rounded-full bg-[var(--primary)]" :style="{ width: `${percent}%` }" />
         </div>
-        <p class="mt-2 text-[11px] text-[#5f6368] dark:text-slate-400">
+        <p class="mt-2 text-[11px] text-[var(--muted-foreground)]">
           {{ formatBytes(totalUsed) }} dari {{ formatBytes(totalCapacity) }} terpakai
         </p>
       </div>

@@ -30,38 +30,38 @@ function open(item) {
 
 <template>
   <div class="relative w-full max-w-[720px]">
-    <div class="flex h-12 items-center gap-3 rounded-full bg-[#e9eef6] px-4 transition focus-within:bg-white focus-within:shadow-[0_1px_6px_rgba(32,33,36,0.28)] dark:bg-slate-800 dark:focus-within:bg-slate-800">
-      <IconSearch :size="20" :stroke="2" class="shrink-0 text-[#5f6368] dark:text-slate-400" />
+    <div class="sg-field flex h-12 items-center gap-3 px-4 transition focus-within:ring-2 focus-within:ring-[var(--focus-line)]">
+      <IconSearch :size="20" :stroke="2" class="shrink-0 text-[var(--muted-foreground)]" />
       <input
         v-model="term"
         type="text"
-        class="min-w-0 flex-1 bg-transparent text-sm text-[#202124] outline-none placeholder:text-[#5f6368] dark:text-slate-100 dark:placeholder:text-slate-400"
+        class="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
         placeholder="Telusuri di KoncetCloud"
         aria-label="Telusuri berkas"
         @focus="isOpen = true"
       />
-      <button v-if="term" type="button" class="grid size-6 shrink-0 place-items-center rounded-full text-[#5f6368] hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10" aria-label="Bersihkan pencarian" @click="clear">
+      <button v-if="term" type="button" class="sg-control sg-hover grid size-6 shrink-0 place-items-center rounded-full text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" aria-label="Bersihkan pencarian" @click="clear">
         <IconX :size="16" :stroke="2" />
       </button>
     </div>
 
-    <div v-if="isOpen && term.trim()" class="absolute left-0 right-0 top-full z-30 mt-2 max-h-[420px] overflow-y-auto rounded-2xl border border-[#e0e3e7] bg-white p-2 shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800">
-      <p v-if="!results.length" class="px-3 py-3 text-sm text-[#5f6368] dark:text-slate-400">
+    <div v-if="isOpen && term.trim()" class="sg-popover absolute left-0 right-0 top-full z-30 mt-2 max-h-[420px] overflow-y-auto p-2">
+      <p v-if="!results.length" class="px-3 py-3 text-sm text-[var(--muted-foreground)]">
         Tidak ada hasil untuk "{{ term }}".
       </p>
       <button
         v-for="item in results"
         :key="item.path"
         type="button"
-        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-[#f8fafd] dark:hover:bg-slate-700/70"
+        class="sg-hover flex w-full items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-left transition"
         @click="open(item)"
       >
-        <component :is="getFileIcon(item, false)" :size="18" :stroke="1.8" class="shrink-0 text-[#5f6368] dark:text-slate-400" />
+        <component :is="getFileIcon(item, false)" :size="18" :stroke="1.8" class="shrink-0 text-[var(--muted-foreground)]" />
         <span class="min-w-0 flex-1">
-          <span class="block truncate text-sm text-[#202124] dark:text-slate-100">{{ item.name }}</span>
-          <span class="block truncate font-mono text-[11px] text-[#5f6368] dark:text-slate-400">{{ item.path }}</span>
+          <span class="block truncate text-sm text-[var(--foreground)]">{{ item.name }}</span>
+          <span class="block truncate font-mono text-[11px] text-[var(--muted-foreground)]">{{ item.path }}</span>
         </span>
-        <span class="shrink-0 text-xs text-[#5f6368] dark:text-slate-400">{{ item.dir ? 'Folder' : formatBytes(item.size) }}</span>
+        <span class="shrink-0 text-xs text-[var(--muted-foreground)]">{{ item.dir ? 'Folder' : formatBytes(item.size) }}</span>
       </button>
     </div>
   </div>

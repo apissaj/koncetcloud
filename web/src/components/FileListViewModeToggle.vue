@@ -17,10 +17,10 @@ function setMode(mode) {
   <div class="flex items-center gap-2">
     <button
       type="button"
-      class="grid size-9 place-items-center rounded-full transition"
+      class="grid size-9 place-items-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
       :class="modelValue === 'list'
-        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-sky-500/15 dark:text-sky-300'
-        : 'text-[#5f6368] hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10'"
+        ? 'sg-state text-[var(--foreground)]'
+        : 'sg-control text-[var(--muted-foreground)] hover:bg-[var(--hover)]'"
       :aria-pressed="modelValue === 'list'"
       aria-label="Tampilan daftar"
       @click="setMode('list')"
@@ -29,10 +29,10 @@ function setMode(mode) {
     </button>
     <button
       type="button"
-      class="grid size-9 place-items-center rounded-full transition"
+      class="grid size-9 place-items-center rounded-full transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
       :class="modelValue === 'grid'
-        ? 'bg-[#e8f0fe] text-[#1a73e8] dark:bg-sky-500/15 dark:text-sky-300'
-        : 'text-[#5f6368] hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10'"
+        ? 'sg-state text-[var(--foreground)]'
+        : 'sg-control text-[var(--muted-foreground)] hover:bg-[var(--hover)]'"
       :aria-pressed="modelValue === 'grid'"
       aria-label="Tampilan ikon"
       @click="setMode('grid')"

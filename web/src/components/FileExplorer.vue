@@ -205,23 +205,24 @@ onMounted(load);
         <div class="flex flex-wrap items-center gap-1 text-sm">
           <button
             type="button"
-            class="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-[#202124] transition hover:bg-black/5 dark:text-slate-100 dark:hover:bg-white/5"
+            class="flex items-center gap-1 rounded-lg px-2 py-1 font-semibold text-[var(--foreground)] transition hover:bg-[var(--hover)]"
             @click="emit('navigate', '')"
           >
             {{ fs || 'drive' }}
           </button>
           <template v-for="(seg, i) in breadcrumbs" :key="seg">
-            <IconChevronRight :size="16" :stroke="1.5" class="text-[#5f6368] dark:text-slate-500" />
+            <IconChevronRight :size="16" :stroke="1.5" class="text-[var(--muted-foreground)]" />
             <button
               type="button"
-              class="max-w-[220px] truncate rounded-lg px-2 py-1 text-[#5f6368] transition hover:bg-black/5 hover:text-[#202124] dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100"
+              class="max-w-[220px] truncate rounded-lg px-2 py-1 text-[var(--muted-foreground)] transition hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+              :class="i === breadcrumbs.length - 1 ? 'sg-state text-[var(--foreground)]' : ''"
               @click="navigateTo(breadcrumbs.slice(0, i + 1))"
             >
               {{ seg }}
             </button>
           </template>
         </div>
-        <p class="mt-1 px-2 text-xs text-[#5f6368] dark:text-slate-400">
+        <p class="mt-1 px-2 text-xs text-[var(--muted-foreground)]">
           {{ counts.folders }} folder, {{ counts.files }} berkas
           <template v-if="counts.bytes">, {{ formatBytes(counts.bytes) }}</template>
         </p>
@@ -230,7 +231,7 @@ onMounted(load);
       <div class="flex items-center gap-2">
         <button
           type="button"
-          class="grid size-9 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10"
+          class="sg-control grid size-9 place-items-center rounded-full text-[var(--muted-foreground)] transition hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
           :disabled="!props.path"
           aria-label="Naik satu tingkat"
           title="Naik satu tingkat"
@@ -240,7 +241,7 @@ onMounted(load);
         </button>
         <button
           type="button"
-          class="grid size-9 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10"
+          class="sg-control grid size-9 place-items-center rounded-full text-[var(--muted-foreground)] transition hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
           aria-label="Segarkan"
           title="Segarkan"
           @click="load"
@@ -250,7 +251,7 @@ onMounted(load);
         <FileListViewModeToggle v-model="viewMode" />
         <button
           type="button"
-          class="inline-flex h-10 items-center gap-2 rounded-full bg-[#1a73e8] px-4 text-sm font-medium text-white transition hover:bg-[#1765cc] disabled:opacity-60"
+          class="sg-primary inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-60"
           :disabled="!props.fs"
           v-if="canWrite"
           @click="showNewFolder = true"
@@ -274,30 +275,30 @@ onMounted(load);
 
     <LoadingState v-if="loading" message="Sedang memuat..." />
 
-    <div v-else-if="error" class="flex flex-col items-center gap-3 rounded-2xl border border-[#e0e3e7] bg-white py-12 text-center dark:border-slate-700 dark:bg-slate-800">
-      <p class="font-medium text-[#c5221f]">Tidak bisa membaca folder</p>
-      <p class="max-w-md px-4 text-sm text-[#5f6368] dark:text-slate-400">{{ error }}</p>
-      <button type="button" class="inline-flex h-10 items-center rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" @click="load">
+    <div v-else-if="error" class="sg-card flex flex-col items-center gap-3 py-12 text-center">
+      <p class="font-medium text-[var(--destructive)]">Tidak bisa membaca folder</p>
+      <p class="max-w-md px-4 text-sm text-[var(--muted-foreground)]">{{ error }}</p>
+      <button type="button" class="sg-control inline-flex h-10 items-center rounded-full px-5 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="load">
         Coba lagi
       </button>
     </div>
 
-    <div v-else-if="!items.length" class="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e0e3e7] py-16 text-center dark:border-slate-700">
-      <p class="font-medium text-[#5f6368] dark:text-slate-300">Folder ini kosong</p>
-      <p class="text-sm text-[#5f6368] dark:text-slate-400">Buat folder baru atau jalankan job backup.</p>
-      <button v-if="canWrite" type="button" class="mt-2 inline-flex h-10 items-center gap-2 rounded-full bg-[#1a73e8] px-4 text-sm font-medium text-white transition hover:bg-[#1765cc]" @click="showNewFolder = true">
+    <div v-else-if="!items.length" class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--glass-edge)] py-16 text-center">
+      <p class="font-medium text-[var(--muted-foreground)]">Folder ini kosong</p>
+      <p class="text-sm text-[var(--muted-foreground)]">Buat folder baru atau jalankan job backup.</p>
+      <button v-if="canWrite" type="button" class="sg-primary mt-2 inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="showNewFolder = true">
         <IconFolderPlus :size="18" :stroke="2" />
         Folder baru
       </button>
     </div>
 
-    <div v-else-if="!shown.length" class="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-[#e0e3e7] py-12 text-center dark:border-slate-700">
-      <p class="font-medium text-[#5f6368] dark:text-slate-300">Tidak ada yang cocok</p>
-      <p class="text-sm text-[#5f6368] dark:text-slate-400">Hapus kata kunci atau filter untuk melihat semua item.</p>
-      <button type="button" class="mt-2 inline-flex h-10 items-center rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" @click="filter = ''; typeFilter = 'all'">Hapus filter</button>
+    <div v-else-if="!shown.length" class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-[var(--glass-edge)] py-12 text-center">
+      <p class="font-medium text-[var(--muted-foreground)]">Tidak ada yang cocok</p>
+      <p class="text-sm text-[var(--muted-foreground)]">Hapus kata kunci atau filter untuk melihat semua item.</p>
+      <button type="button" class="sg-control mt-2 inline-flex h-10 items-center rounded-full px-5 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="filter = ''; typeFilter = 'all'">Hapus filter</button>
     </div>
 
-    <div v-else class="overflow-hidden rounded-2xl border border-[#e8eaed] bg-white dark:border-slate-700 dark:bg-slate-800">
+    <div v-else class="sg-card overflow-hidden">
       <template v-if="viewMode === 'list'">
         <FileListHeader :sortable="true" :sort-by="sortBy" :sort-direction="sortDir" @sort="sortByField" />
         <FileListRow

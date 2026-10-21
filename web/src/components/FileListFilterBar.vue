@@ -45,38 +45,39 @@ function apply(value) {
       <div class="relative">
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-2xl border border-[#e0e3e7] bg-[#f8fafd] px-3.5 py-2.5 text-sm font-medium text-[#3c4043] transition hover:border-[#c7d2e0] hover:bg-white dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:bg-slate-800"
+          class="inline-flex items-center gap-2 px-3.5 py-2.5 text-sm font-medium text-[var(--foreground)] transition hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
+          :class="isFilterActive() ? 'sg-state' : 'sg-control'"
           @click.stop="emit('toggle-filter-menu', 'type')"
         >
           <component :is="getTypeFilterIcon(selectedTypeFilter, isFilterActive())" :size="16" :stroke="isFilterActive() ? 0 : 1.8" />
           <span>{{ getTypeLabel(selectedTypeFilter) }}</span>
-          <IconX v-if="isFilterActive()" :size="16" :stroke="2" class="text-[#5f6368] transition hover:text-[#1a73e8] dark:text-slate-400 dark:hover:text-sky-300" @click.stop="emit('clear-filter', 'type')" />
-          <IconChevronDown v-else :size="16" :stroke="2" class="text-[#5f6368] dark:text-slate-400" />
+          <IconX v-if="isFilterActive()" :size="16" :stroke="2" class="text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]" @click.stop="emit('clear-filter', 'type')" />
+          <IconChevronDown v-else :size="16" :stroke="2" class="text-[var(--muted-foreground)]" />
         </button>
-        <div v-if="activeFilterMenu === 'type'" class="absolute left-0 top-full z-30 mt-2 min-w-[220px] overflow-hidden rounded-2xl border border-[#e0e3e7] bg-white p-2 shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800">
+        <div v-if="activeFilterMenu === 'type'" class="sg-popover absolute left-0 top-full z-30 mt-2 min-w-[220px] overflow-hidden p-2">
           <button
             v-for="option in ALL_TYPES"
             :key="option.value"
             type="button"
-            class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition text-[#202124] hover:bg-[#f8fafd] dark:text-slate-100 dark:hover:bg-slate-700/70"
+            class="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm transition sg-hover text-[var(--foreground)]"
             @click="apply(option.value)"
           >
             <span class="flex items-center gap-2">
-              <component :is="getTypeFilterIcon(option.value, selectedTypeFilter === option.value)" :size="16" :stroke="selectedTypeFilter === option.value ? 0 : 1.8" class="text-[#5f6368] dark:text-slate-400" />
+              <component :is="getTypeFilterIcon(option.value, selectedTypeFilter === option.value)" :size="16" :stroke="selectedTypeFilter === option.value ? 0 : 1.8" class="text-[var(--muted-foreground)]" />
               {{ option.label }}
             </span>
-            <IconCheck v-if="selectedTypeFilter === option.value" :size="16" :stroke="2" class="text-[#1a73e8] dark:text-sky-300" />
+            <IconCheck v-if="selectedTypeFilter === option.value" :size="16" :stroke="2" class="text-[var(--foreground)]" />
           </button>
         </div>
       </div>
     </div>
 
     <div class="relative sm:max-w-[300px] sm:flex-1">
-      <IconSearch :size="18" :stroke="2" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#5f6368] dark:text-slate-400" />
+      <IconSearch :size="18" :stroke="2" class="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
       <input
         :value="searchTerm"
         type="text"
-        class="h-11 w-full rounded-full border border-[#e0e3e7] bg-white pl-10 pr-4 text-sm text-[#202124] outline-none transition placeholder:text-[#5f6368] focus:border-[#1a73e8] focus:shadow-[0_0_0_3px_rgba(26,115,232,0.15)] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:placeholder:text-slate-400"
+        class="sg-field h-11 w-full pl-10 pr-4 text-sm text-[var(--foreground)] outline-none transition placeholder:text-[var(--muted-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
         placeholder="Telusuri folder ini..."
         aria-label="Cari berkas di folder ini"
         @input="emit('update:searchTerm', $event.target.value)"

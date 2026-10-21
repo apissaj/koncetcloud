@@ -336,18 +336,18 @@ onBeforeUnmount(stopOauthPoll);
 
 <template>
   <div class="flex flex-col gap-5">
-    <div class="rounded-[24px] bg-white p-5 dark:bg-slate-800 sm:p-7">
+    <div class="sg-card p-5 sm:p-7">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
-          <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[#1a73e8] dark:text-sky-400">Akun</p>
-          <h1 class="text-[26px] font-medium text-[#202124] dark:text-slate-100">Hubungkan Akun</h1>
-          <p class="mt-2 max-w-[720px] text-sm text-[#5f6368] dark:text-slate-400">
+          <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--primary)]">Akun</p>
+          <h1 class="text-[26px] font-medium text-[var(--foreground)]">Hubungkan Akun</h1>
+          <p class="mt-2 max-w-[720px] text-sm text-[var(--muted-foreground)]">
             Sambungkan drive pribadi Anda (MEGA, pCloud, OneDrive, Google Drive) sebagai remote rclone.
             Anda juga bisa menambahkan lebih dari satu akun untuk platform yang sama.
             Setelah terhubung, Anda bisa membuat job mirror dari template Google Drive.
           </p>
         </div>
-        <button type="button" class="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-[#dadce0] bg-white px-4 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700" :disabled="loading" @click="load">
+        <button type="button" class="sg-control inline-flex h-10 shrink-0 items-center gap-2 px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" :disabled="loading" @click="load">
           <IconRefresh :size="17" :stroke="1.8" :class="loading ? 'animate-spin' : ''" />
           Muat ulang
         </button>
@@ -356,32 +356,32 @@ onBeforeUnmount(stopOauthPoll);
 
     <LoadingState v-if="loading" message="Membaca daftar platform..." />
 
-    <div v-else-if="error" class="rounded-[24px] border border-[#e0e3e7] bg-white p-6 dark:border-slate-700 dark:bg-slate-800">
-      <p class="font-medium text-[#c5221f]">Daftar platform tidak bisa dibaca</p>
-      <p class="mt-1 text-sm text-[#5f6368] dark:text-slate-400">{{ error }}</p>
-      <button type="button" class="mt-3 inline-flex h-10 items-center rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" @click="load">Coba lagi</button>
+    <div v-else-if="error" class="sg-card p-6">
+      <p class="font-medium text-[var(--destructive)]">Daftar platform tidak bisa dibaca</p>
+      <p class="mt-1 text-sm text-[var(--muted-foreground)]">{{ error }}</p>
+      <button type="button" class="sg-control mt-3 inline-flex h-10 items-center px-5 text-sm font-medium text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="load">Coba lagi</button>
     </div>
 
-    <div v-else-if="!cards.length" class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[#e0e3e7] py-14 text-center dark:border-slate-700">
-      <IconCloudPlus :size="28" :stroke="1.5" class="text-[#5f6368] dark:text-slate-400" />
-      <p class="font-medium text-[#5f6368] dark:text-slate-300">Belum ada platform yang tersedia</p>
+    <div v-else-if="!cards.length" class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[var(--glass-edge)] py-14 text-center">
+      <IconCloudPlus :size="28" :stroke="1.5" class="text-[var(--muted-foreground)]" />
+      <p class="font-medium text-[var(--muted-foreground)]">Belum ada platform yang tersedia</p>
     </div>
 
     <div v-else class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <article
         v-for="card in cards"
         :key="card.id"
-        class="flex flex-col rounded-2xl border border-[#e0e3e7] bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition hover:border-[#c7d2e0] hover:shadow-[0_4px_12px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-800"
+        class="sg-card flex flex-col p-4 transition"
       >
         <header class="flex items-start justify-between gap-3">
           <div class="flex min-w-0 items-center gap-2.5">
-            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#f1f3f4] dark:bg-slate-700">
+            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--muted)]">
               <img v-if="iconOf(card)" :src="iconOf(card)" :alt="card.label" class="size-5 object-contain" />
-              <IconCloudPlus v-else :size="20" :stroke="1.8" class="text-[#5f6368] dark:text-slate-300" />
+              <IconCloudPlus v-else :size="20" :stroke="1.8" class="text-[var(--muted-foreground)]" />
             </span>
             <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-[#202124] dark:text-slate-100">{{ card.label }}</p>
-              <p class="truncate font-mono text-xs text-[#5f6368] dark:text-slate-400">
+              <p class="truncate text-sm font-semibold text-[var(--foreground)]">{{ card.label }}</p>
+              <p class="truncate font-mono text-xs text-[var(--muted-foreground)]">
                 {{ card.connected ? remoteNameOf(card) : `Gratis ${card.freeTier}` }}
               </p>
             </div>
@@ -390,18 +390,18 @@ onBeforeUnmount(stopOauthPoll);
             <span
               class="rounded-full border px-2.5 py-0.5 text-[11px] font-medium"
               :class="card.connected
-                ? 'border-[#34a853]/35 bg-[#e6f4ea] text-[#137333] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300'
-                : 'border-[#dadce0] bg-[#f1f3f4] text-[#5f6368] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300'"
+                ? 'border-[var(--glass-edge)] text-[var(--success)]'
+                : 'border-[var(--border)] text-[var(--muted-foreground)]'"
             >{{ card.connected ? 'Terhubung' : 'Belum terhubung' }}</span>
             <span
               v-if="card.isExtra"
-              class="rounded-full border border-[#dadce0] bg-[#f1f3f4] px-2 py-0.5 text-[11px] font-medium text-[#5f6368] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
+              class="rounded-full border border-[var(--border)] px-2 py-0.5 text-[11px] font-medium text-[var(--muted-foreground)]"
             >Akun tambahan</span>
             <span
               v-else-if="card.connected && isActive(card)"
-              class="inline-flex items-center gap-1 rounded-full border border-[#1a73e8]/35 bg-[#e8f0fe] px-2 py-0.5 text-[11px] font-medium text-[#1967d2] dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-300"
+              class="inline-flex items-center gap-1 rounded-full border border-[var(--glass-edge)] px-2 py-0.5 text-[11px] font-medium text-[var(--success)]"
             >
-              <span class="size-1.5 rounded-full bg-[#1a73e8] dark:bg-sky-300" />
+              <span class="size-1.5 rounded-full bg-[var(--success)]" />
               Aktif
             </span>
           </div>
@@ -409,39 +409,39 @@ onBeforeUnmount(stopOauthPoll);
 
         <p
           v-if="card.account"
-          class="mt-2.5 flex items-center gap-1.5 text-xs text-[#5f6368] dark:text-slate-400"
+          class="mt-2.5 flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]"
           :title="card.account"
         >
-          <IconAt :size="14" :stroke="1.8" class="shrink-0 text-[#9aa0a6] dark:text-slate-500" />
+          <IconAt :size="14" :stroke="1.8" class="shrink-0 text-[var(--muted-foreground)]" />
           <span class="truncate font-mono">{{ card.account }}</span>
         </p>
 
-        <p v-if="card.error" class="mt-3 flex items-start gap-1.5 text-xs text-[#c5221f] dark:text-red-300">
+        <p v-if="card.error" class="mt-3 flex items-start gap-1.5 text-xs text-[var(--destructive)]">
           <IconAlertTriangle :size="14" :stroke="2" class="mt-0.5 shrink-0" />
           {{ card.error }}
         </p>
 
         <div class="mt-3 min-h-[52px]">
           <template v-if="capacityOf(card)">
-            <div class="h-1.5 w-full overflow-hidden rounded-full bg-[#e8eaed] dark:bg-slate-700">
-              <div class="h-full rounded-full bg-[#1a73e8] dark:bg-sky-400" :style="{ width: `${pct(capacityOf(card))}%` }" />
+            <div class="sg-groove h-1.5 w-full overflow-hidden rounded-full bg-[var(--muted)]">
+              <div class="h-full rounded-full bg-[var(--primary)]" :style="{ width: `${pct(capacityOf(card))}%` }" />
             </div>
             <div class="mt-2 flex items-center justify-between text-xs">
-              <span class="text-[#5f6368] dark:text-slate-400">
+              <span class="text-[var(--muted-foreground)]">
                 {{ fmtBytes(capacityOf(card).used) }} / {{ fmtBytes(capacityOf(card).total) }}
               </span>
-              <span class="font-medium text-[#1a73e8] dark:text-sky-300">{{ pctLabel(capacityOf(card)) }}</span>
+              <span class="font-medium text-[var(--primary)]">{{ pctLabel(capacityOf(card)) }}</span>
             </div>
           </template>
-          <p v-else-if="card.connected" class="text-xs text-[#5f6368] dark:text-slate-400">Kapasitas belum tersedia.</p>
-          <p v-else class="text-xs text-[#5f6368] dark:text-slate-400">Belum terhubung. Kapasitas muncul setelah tersambung.</p>
+          <p v-else-if="card.connected" class="text-xs text-[var(--muted-foreground)]">Kapasitas belum tersedia.</p>
+          <p v-else class="text-xs text-[var(--muted-foreground)]">Belum terhubung. Kapasitas muncul setelah tersambung.</p>
         </div>
 
-        <p v-if="actionError[card.id]" class="mt-3 flex items-start gap-1.5 rounded-lg border border-[#ea4335]/35 bg-[#ea4335]/10 px-2.5 py-1.5 text-xs text-[#c5221f] dark:border-red-400/30 dark:text-red-300">
+        <p v-if="actionError[card.id]" class="mt-3 flex items-start gap-1.5 rounded-lg border border-[var(--destructive)]/35 bg-[var(--destructive)]/10 px-2.5 py-1.5 text-xs text-[var(--destructive)]">
           <IconAlertTriangle :size="14" :stroke="2" class="mt-0.5 shrink-0" />
           {{ actionError[card.id] }}
         </p>
-        <p v-if="notice[card.id]" class="mt-3 flex items-start gap-1.5 rounded-lg border border-[#34a853]/35 bg-[#e6f4ea] px-2.5 py-1.5 text-xs text-[#137333] dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300">
+        <p v-if="notice[card.id]" class="mt-3 flex items-start gap-1.5 rounded-lg border border-[var(--glass-edge)] bg-[var(--success)]/10 px-2.5 py-1.5 text-xs text-[var(--success)]">
           <IconCircleCheck :size="14" :stroke="2" class="mt-0.5 shrink-0" />
           {{ notice[card.id] }}
         </p>
@@ -450,7 +450,7 @@ onBeforeUnmount(stopOauthPoll);
           <template v-if="!card.connected">
             <button
               type="button"
-              class="inline-flex h-10 items-center gap-2 rounded-full bg-[#1a73e8] px-4 text-sm font-medium text-white transition hover:bg-[#1765cc] disabled:opacity-60"
+              class="sg-control inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-60"
               :disabled="busy[card.id]"
               v-if="canWrite" @click="onConnect(card)"
             >
@@ -463,7 +463,7 @@ onBeforeUnmount(stopOauthPoll);
           <template v-else>
             <button
               type="button"
-              class="inline-flex h-10 items-center gap-2 rounded-full border border-[#1a73e8]/40 bg-[#e8f0fe] px-4 text-sm font-medium text-[#1967d2] transition hover:bg-[#dbe7fb] disabled:opacity-60 dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-300"
+              class="sg-control inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-60"
               :disabled="busy[card.id]"
               v-if="canWrite" @click="mirror(card)"
             >
@@ -475,7 +475,7 @@ onBeforeUnmount(stopOauthPoll);
             <button
               v-if="canAddAccount(card) && canWrite"
               type="button"
-              class="inline-flex h-10 items-center gap-2 rounded-full border border-[#1a73e8]/40 bg-white px-4 text-sm font-medium text-[#1967d2] transition hover:bg-[#f0f6ff] disabled:opacity-60 dark:border-sky-400/30 dark:bg-slate-800 dark:text-sky-300 dark:hover:bg-slate-700"
+              class="sg-control inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-60"
               :disabled="busy[card.id]"
               @click="openAddAccount(card)"
             >
@@ -485,7 +485,7 @@ onBeforeUnmount(stopOauthPoll);
 
             <span
               v-if="isProtected(card)"
-              class="inline-flex h-10 items-center gap-2 rounded-full border border-[#dadce0] bg-[#f1f3f4] px-4 text-sm font-medium text-[#5f6368] dark:border-slate-600 dark:bg-slate-700 dark:text-slate-300"
+              class="sg-control inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-[var(--muted-foreground)]"
               title="Platform ini dilindungi dan tidak bisa diputuskan"
             >
               <IconLock :size="17" :stroke="1.8" />
@@ -494,7 +494,7 @@ onBeforeUnmount(stopOauthPoll);
             <button
               v-else-if="canWrite"
               type="button"
-              class="inline-flex h-10 items-center gap-2 rounded-full border border-[#ea4335]/50 bg-[#ea4335]/10 px-4 text-sm font-medium text-[#c5221f] transition hover:bg-[#ea4335]/20 disabled:opacity-60 dark:border-red-400/40 dark:text-red-300"
+              class="sg-control inline-flex h-10 items-center gap-2 px-4 text-sm font-medium text-[var(--destructive)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none disabled:opacity-60"
               :disabled="busy[card.id]"
               @click="disconnect(card)"
             >
@@ -517,26 +517,26 @@ onBeforeUnmount(stopOauthPoll);
     />
 
     <!-- Modal OAuth -->
-    <div v-if="oauth" class="fixed inset-0 z-50 grid place-items-center bg-slate-900/45 p-4" @click.self="closeOauth">
-      <div class="w-full max-w-[480px] overflow-hidden rounded-2xl bg-white shadow-[0_20px_40px_rgba(15,23,42,0.18)] dark:bg-slate-800">
-        <header class="flex items-center gap-3 border-b border-[#eceff1] px-6 py-4 dark:border-slate-700">
-          <span class="grid size-10 place-items-center rounded-full bg-[#e8f0fe] text-[#1a73e8] dark:bg-sky-500/15 dark:text-sky-300">
+    <div v-if="oauth" class="fixed inset-0 z-50 grid place-items-center bg-[var(--foreground)]/40 p-4" @click.self="closeOauth">
+      <div class="sg-popover w-full max-w-[480px] overflow-hidden">
+        <header class="flex items-center gap-3 border-b border-[var(--border)] px-6 py-4">
+          <span class="grid size-10 place-items-center rounded-full bg-[var(--muted)] text-[var(--primary)]">
             <img v-if="iconOf(oauth.platform)" :src="iconOf(oauth.platform)" :alt="oauth.platform.label" class="size-5 object-contain" />
             <IconPlugConnected v-else :size="22" :stroke="2" />
           </span>
           <div class="min-w-0">
-            <h2 class="text-lg font-semibold text-[#202124] dark:text-slate-100">Hubungkan {{ oauth.platform.label }}</h2>
-            <p class="text-xs text-[#5f6368] dark:text-slate-400">Login lewat browser, lalu kembali ke halaman ini.</p>
+            <h2 class="text-lg font-semibold text-[var(--foreground)]">Hubungkan {{ oauth.platform.label }}</h2>
+            <p class="text-xs text-[var(--muted-foreground)]">Login lewat browser, lalu kembali ke halaman ini.</p>
           </div>
-          <button type="button" class="ml-auto grid size-8 shrink-0 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10" aria-label="Tutup" @click="closeOauth">
+          <button type="button" class="sg-control ml-auto grid size-8 shrink-0 place-items-center rounded-full text-[var(--muted-foreground)] transition hover:bg-[var(--hover)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" aria-label="Tutup" @click="closeOauth">
             <IconX :size="18" :stroke="2" />
           </button>
         </header>
 
         <div class="px-6 py-5">
           <template v-if="oauth.status === 'waiting'">
-            <p class="text-sm text-[#3c4043] dark:text-slate-200">Menunggu Anda login di browser...</p>
-            <p class="mt-1 flex items-center gap-2 text-xs text-[#5f6368] dark:text-slate-400">
+            <p class="text-sm text-[var(--foreground)]">Menunggu Anda login di browser...</p>
+            <p class="mt-1 flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
               <IconLoader2 :size="14" :stroke="2" class="animate-spin" />
               Memeriksa status setiap 2 detik.
             </p>
@@ -546,42 +546,42 @@ onBeforeUnmount(stopOauthPoll);
                 :href="oauth.authUrl"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex h-11 items-center gap-2 rounded-full bg-[#1a73e8] px-5 text-sm font-medium text-white transition hover:bg-[#1765cc]"
+                class="sg-control inline-flex h-11 items-center gap-2 px-5 text-sm font-medium text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none"
               >
                 <IconExternalLink :size="18" :stroke="2" />
                 Buka halaman login {{ oauth.platform.label }}
               </a>
-              <p class="mt-2 break-all font-mono text-[11px] text-[#5f6368] dark:text-slate-400">{{ oauth.authUrl }}</p>
+              <p class="mt-2 break-all font-mono text-[11px] text-[var(--muted-foreground)]">{{ oauth.authUrl }}</p>
             </div>
-            <p v-else class="mt-4 flex items-center gap-2 text-sm text-[#5f6368] dark:text-slate-400">
+            <p v-else class="mt-4 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
               <IconLoader2 :size="16" :stroke="2" class="animate-spin" />
               Menyiapkan tautan login...
             </p>
           </template>
 
           <template v-else-if="oauth.status === 'done'">
-            <div class="flex items-start gap-3 rounded-xl border border-[#34a853]/35 bg-[#e6f4ea] px-4 py-3 dark:border-emerald-400/30 dark:bg-emerald-400/10">
-              <IconCircleCheck :size="20" :stroke="2" class="mt-0.5 shrink-0 text-[#137333] dark:text-emerald-300" />
+            <div class="flex items-start gap-3 rounded-xl border border-[var(--glass-edge)] bg-[var(--success)]/10 px-4 py-3">
+              <IconCircleCheck :size="20" :stroke="2" class="mt-0.5 shrink-0 text-[var(--success)]" />
               <div>
-                <p class="text-sm font-medium text-[#137333] dark:text-emerald-300">{{ oauth.platform.label }} berhasil terhubung.</p>
-                <p class="mt-0.5 text-xs text-[#137333]/80 dark:text-emerald-300/80">Remote rclone sudah siap dipakai.</p>
+                <p class="text-sm font-medium text-[var(--success)]">{{ oauth.platform.label }} berhasil terhubung.</p>
+                <p class="mt-0.5 text-xs text-[var(--success)]/80">Remote rclone sudah siap dipakai.</p>
               </div>
             </div>
           </template>
 
           <template v-else>
-            <div class="flex items-start gap-3 rounded-xl border border-[#ea4335]/35 bg-[#ea4335]/10 px-4 py-3 dark:border-red-400/30 dark:bg-red-400/10">
-              <IconAlertTriangle :size="20" :stroke="2" class="mt-0.5 shrink-0 text-[#c5221f] dark:text-red-300" />
+            <div class="flex items-start gap-3 rounded-xl border border-[var(--destructive)]/35 bg-[var(--destructive)]/10 px-4 py-3">
+              <IconAlertTriangle :size="20" :stroke="2" class="mt-0.5 shrink-0 text-[var(--destructive)]" />
               <div>
-                <p class="text-sm font-medium text-[#c5221f] dark:text-red-300">Login gagal</p>
-                <p class="mt-0.5 text-xs text-[#c5221f]/80 dark:text-red-300/80">{{ oauth.error }}</p>
+                <p class="text-sm font-medium text-[var(--destructive)]">Login gagal</p>
+                <p class="mt-0.5 text-xs text-[var(--destructive)]/80">{{ oauth.error }}</p>
               </div>
             </div>
           </template>
         </div>
 
-        <footer class="flex justify-end gap-2 border-t border-[#eceff1] px-6 py-4 dark:border-slate-700">
-          <button type="button" class="inline-flex h-10 items-center rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd] dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200" @click="closeOauth">
+        <footer class="flex justify-end gap-2 border-t border-[var(--border)] px-6 py-4">
+          <button type="button" class="sg-control inline-flex h-10 items-center px-5 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] focus-visible:outline-none" @click="closeOauth">
             {{ oauth.status === 'waiting' ? 'Batal' : 'Tutup' }}
           </button>
         </footer>

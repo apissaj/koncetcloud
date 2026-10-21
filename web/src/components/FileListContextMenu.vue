@@ -30,50 +30,50 @@ onBeforeUnmount(() => document.removeEventListener('click', handleDocumentClick)
 <template>
   <div
     ref="menuRef"
-    class="fixed z-50 min-w-[200px] overflow-hidden rounded-2xl border border-[#e0e3e7] bg-white p-2 shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800"
+    class="sg-popover fixed z-50 min-w-[200px] overflow-hidden p-2"
     :style="{ left: `${x}px`, top: `${y}px` }"
     role="menu"
   >
     <button
       v-if="canOpen"
       type="button"
-      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#202124] transition hover:bg-[#f8fafd] dark:text-slate-100 dark:hover:bg-slate-700/70"
+      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--foreground)] transition sg-hover"
       @click="emit('open')"
     >
-      <IconFolderOpen :size="18" :stroke="1.8" class="text-[#5f6368] dark:text-slate-400" />
+      <IconFolderOpen :size="18" :stroke="1.8" class="text-[var(--muted-foreground)]" />
       Buka
     </button>
     <button
       v-if="!item.dir"
       type="button"
-      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#202124] transition hover:bg-[#f8fafd] dark:text-slate-100 dark:hover:bg-slate-700/70"
+      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--foreground)] transition sg-hover"
       @click="emit('download')"
     >
-      <IconDownload :size="18" :stroke="1.8" class="text-[#5f6368] dark:text-slate-400" />
+      <IconDownload :size="18" :stroke="1.8" class="text-[var(--muted-foreground)]" />
       Unduh
     </button>
     <button
       v-if="canWrite"
       type="button"
-      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#202124] transition hover:bg-[#f8fafd] dark:text-slate-100 dark:hover:bg-slate-700/70"
+      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--foreground)] transition sg-hover"
       @click="emit('rename')"
     >
-      <IconPencil :size="18" :stroke="1.8" class="text-[#5f6368] dark:text-slate-400" />
+      <IconPencil :size="18" :stroke="1.8" class="text-[var(--muted-foreground)]" />
       Ubah nama
     </button>
     <button
       type="button"
-      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#202124] transition hover:bg-[#f8fafd] dark:text-slate-100 dark:hover:bg-slate-700/70"
+      class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--foreground)] transition sg-hover"
       @click="emit('details')"
     >
-      <IconInfoCircle :size="18" :stroke="1.8" class="text-[#5f6368] dark:text-slate-400" />
+      <IconInfoCircle :size="18" :stroke="1.8" class="text-[var(--muted-foreground)]" />
       Detail
     </button>
     <template v-if="canWrite">
-      <div class="my-1 h-px bg-[#eceff1] dark:bg-slate-700" />
+      <div class="my-1 h-px bg-[var(--border)]" />
       <button
         type="button"
-        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[#c5221f] transition hover:bg-[#ea4335]/10 dark:text-red-300"
+        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm text-[var(--destructive)] transition sg-hover"
         @click="emit('delete')"
       >
         <IconTrash :size="18" :stroke="1.8" />

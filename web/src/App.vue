@@ -204,8 +204,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div v-if="authed === null" class="grid min-h-screen place-items-center bg-[#f8fafd] dark:bg-slate-900">
-    <p class="text-sm text-[#5f6368] dark:text-slate-400">Memeriksa sesi...</p>
+  <div v-if="authed === null" class="grid min-h-screen place-items-center bg-[var(--background)]">
+    <p class="text-sm text-[var(--muted-foreground)]">Memeriksa sesi...</p>
   </div>
 
   <LoginView v-else-if="!authed" @authed="onAuthed" />
@@ -223,24 +223,24 @@ onBeforeUnmount(() => {
     @open-file="openFile"
     @logout="logout"
   >
-    <div v-if="buildStale" class="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#1a73e8]/35 bg-[#e8f0fe] px-4 py-3 text-sm text-[#1967d2] dark:border-sky-400/30 dark:bg-sky-500/15 dark:text-sky-300">
+    <div v-if="buildStale" class="mb-4 flex flex-wrap items-center gap-3 sg-state rounded-[var(--radius-lg)] px-4 py-3 text-sm text-[var(--foreground)]">
       <span>Versi baru KoncetCloud sudah tersedia. Muat ulang halaman untuk memakainya.</span>
-      <button type="button" class="ml-auto inline-flex h-8 shrink-0 items-center rounded-full border border-[#1a73e8]/40 bg-white px-4 text-xs font-medium text-[#1967d2] transition hover:bg-[#1a73e8]/10 dark:bg-slate-800 dark:text-sky-300" @click="location.reload()">
+      <button type="button" class="ml-auto inline-flex h-8 shrink-0 items-center sg-control rounded-full px-4 text-xs font-medium text-[var(--foreground)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" @click="location.reload()">
         Muat ulang
       </button>
     </div>
 
-    <div v-if="remotesError && !remotes.length" class="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[#ea4335]/35 bg-[#fce8e6] px-4 py-3 text-sm text-[#c5221f] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300">
+    <div v-if="remotesError && !remotes.length" class="mb-4 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--destructive)]/35 bg-[var(--destructive)]/10 px-4 py-3 text-sm text-[var(--destructive)]">
       <span>
         Gagal memuat daftar remote: {{ remotesError }}. Daftar kosong di sini BUKAN berarti
         belum ada remote.
       </span>
-      <button type="button" class="ml-auto inline-flex h-8 shrink-0 items-center rounded-full border border-[#c5221f]/40 bg-white px-4 text-xs font-medium text-[#c5221f] transition hover:bg-[#c5221f]/10 dark:bg-slate-800 dark:text-red-300" @click="loadStatus">
+      <button type="button" class="ml-auto inline-flex h-8 shrink-0 items-center sg-control rounded-full px-4 text-xs font-medium text-[var(--destructive)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" @click="loadStatus">
         Muat ulang
       </button>
     </div>
 
-    <div v-if="statusError" class="mb-4 flex items-start gap-2.5 rounded-2xl border border-[#ea4335]/35 bg-[#fce8e6] px-4 py-3 text-sm text-[#c5221f] dark:border-red-400/30 dark:bg-red-400/10 dark:text-red-300">
+    <div v-if="statusError" class="mb-4 flex items-start gap-2.5 rounded-2xl border border-[var(--destructive)]/35 bg-[var(--destructive)]/10 px-4 py-3 text-sm text-[var(--destructive)]">
       <IconAlertTriangle :size="18" :stroke="2" class="mt-0.5 shrink-0" />
       <span>
         rclone lokal tidak bisa dihubungi ({{ statusError }}). Jalankan
@@ -281,7 +281,7 @@ onBeforeUnmount(() => {
 
     <SecurityPanel v-else-if="view === 'security'" :user="currentUser" />
 
-    <p v-else class="rounded-2xl border border-[#e0e3e7] bg-white p-6 text-sm text-[#5f6368] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
+    <p v-else class="sg-card p-6 text-sm text-[var(--muted-foreground)]">
       Halaman ini hanya untuk admin.
     </p>
   </AppShell>

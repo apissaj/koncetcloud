@@ -181,22 +181,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-screen flex-col overflow-hidden bg-[#f8fafd] text-[#202124] dark:bg-slate-900 dark:text-slate-100">
+  <div class="flex h-screen flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)]">
     <HelpModal :version="status?.version" :rc="status?.rc" :open="isHelpModalOpen" @close="isHelpModalOpen = false" />
 
-    <header class="z-30 grid h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 bg-[#f8fafd] px-2 dark:bg-slate-900 sm:gap-4 sm:px-4 lg:grid-cols-[256px_minmax(320px,720px)_1fr] lg:gap-3 lg:px-0 lg:pr-4">
+    <header class="sg-panel z-30 grid h-16 shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-2 px-2 sm:gap-4 sm:px-4 lg:grid-cols-[256px_minmax(320px,720px)_1fr] lg:gap-3 lg:px-0 lg:pr-4">
       <div class="flex min-w-0 items-center gap-2 lg:gap-3 lg:pl-4">
-        <button type="button" class="grid size-10 shrink-0 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10 lg:hidden" aria-label="Buka menu navigasi" @click.stop="isMobileNavOpen = !isMobileNavOpen">
+        <button type="button" class="sg-control sg-hover grid size-10 shrink-0 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] lg:hidden" aria-label="Buka menu navigasi" @click.stop="isMobileNavOpen = !isMobileNavOpen">
           <IconMenu2 :size="22" :stroke="2" />
         </button>
         <div class="hidden items-center gap-2 lg:flex">
-          <span class="grid size-11 place-items-center overflow-hidden rounded-2xl bg-white dark:bg-slate-800">
+          <span class="sg-control grid size-11 place-items-center overflow-hidden">
             <img :src="logoUrl" alt="KoncetCloud" class="size-9 object-contain" />
           </span>
-          <span class="text-[22px] font-semibold text-[#202124] dark:text-slate-100">KoncetCloud</span>
+          <span class="text-[22px] font-semibold text-[var(--foreground)]">KoncetCloud</span>
         </div>
-        <span class="flex items-center gap-1.5 text-xs text-[#5f6368] dark:text-slate-400 lg:hidden">
-          <span class="size-2 rounded-full" :class="connected ? 'bg-[#34a853]' : 'bg-[#ea4335]'"></span>
+        <span class="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] lg:hidden">
+          <span class="size-2 rounded-full" :class="connected ? 'bg-[var(--success)]' : 'bg-[var(--destructive)]'"></span>
           {{ connected ? 'terhubung' : 'terputus' }}
         </span>
       </div>
@@ -206,29 +206,29 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="flex items-center justify-end gap-1 pr-1 sm:gap-2">
-        <span v-if="isViewer" class="hidden items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 sm:flex" title="Aksi yang mengubah data dinonaktifkan untuk viewer">
+        <span v-if="isViewer" class="hidden items-center gap-1.5 rounded-full border border-[var(--status-interrupted)] px-3 py-1.5 text-xs font-medium text-[var(--status-interrupted)] sm:flex" title="Aksi yang mengubah data dinonaktifkan untuk viewer">
           <IconEye :size="14" :stroke="2" />
           Mode lihat
         </span>
-        <span v-if="user" class="hidden items-center gap-2 rounded-full border border-[#e0e3e7] px-3 py-1.5 text-xs text-[#5f6368] dark:border-slate-700 dark:text-slate-400 md:flex">
+        <span v-if="user" class="sg-control hidden items-center gap-2 rounded-full px-3 py-1.5 text-xs text-[var(--muted-foreground)] md:flex">
           <IconUser :size="14" :stroke="2" />
           {{ user.username }}
-          <span class="rounded-full bg-[#f1f3f4] px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#5f6368] dark:bg-slate-700 dark:text-slate-300">{{ user.role }}</span>
+          <span class="sg-control rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--muted-foreground)]">{{ user.role }}</span>
         </span>
-        <span class="hidden items-center gap-2 rounded-full border border-[#e0e3e7] px-3 py-1.5 text-xs text-[#5f6368] dark:border-slate-700 dark:text-slate-400 xl:flex">
-          <span class="size-2 rounded-full" :class="connected ? 'bg-[#34a853]' : 'bg-[#ea4335]'"></span>
+        <span class="sg-control hidden items-center gap-2 rounded-full px-3 py-1.5 text-xs text-[var(--muted-foreground)] xl:flex">
+          <span class="size-2 rounded-full" :class="connected ? 'bg-[var(--success)]' : 'bg-[var(--destructive)]'"></span>
           {{ connected ? `rclone ${status?.version || ''}` : 'rclone terputus' }}
         </span>
-        <button type="button" class="grid size-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10" :aria-label="theme === 'dark' ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'" @click="toggleTheme">
+        <button type="button" class="sg-control sg-hover grid size-10 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" :aria-label="theme === 'dark' ? 'Ganti ke tema terang' : 'Ganti ke tema gelap'" @click="toggleTheme">
           <component :is="theme === 'dark' ? IconSun : IconMoon" :size="20" :stroke="2" />
         </button>
-        <button type="button" class="grid size-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10" aria-label="Buka bantuan" @click="isHelpModalOpen = true">
+        <button type="button" class="sg-control sg-hover grid size-10 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" aria-label="Buka bantuan" @click="isHelpModalOpen = true">
           <IconHelp :size="20" :stroke="2" />
         </button>
         <div class="relative" data-notif-root>
           <button
             type="button"
-            class="relative grid size-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10"
+            class="sg-control sg-hover relative grid size-10 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
             aria-label="Pemberitahuan"
             :aria-expanded="notifOpen"
             @click.stop="toggleNotif"
@@ -236,26 +236,26 @@ onBeforeUnmount(() => {
             <IconBell :size="20" :stroke="2" />
             <span
               v-if="notifBadge"
-              class="absolute right-1.5 top-1.5 size-2 rounded-full bg-[#ea4335] dark:bg-red-400"
+              class="absolute right-1.5 top-1.5 size-2 rounded-full bg-[var(--destructive)]"
               aria-hidden="true"
             />
           </button>
           <div
             v-if="notifOpen"
-            class="absolute right-0 top-full z-40 mt-2 w-[350px] max-w-[85vw] overflow-hidden rounded-2xl border border-[#e0e3e7] bg-white shadow-[0_16px_40px_rgba(32,33,36,0.16)] dark:border-slate-700 dark:bg-slate-800"
+            class="sg-popover absolute right-0 top-full z-40 mt-2 w-[350px] max-w-[85vw] overflow-hidden"
           >
-            <header class="flex items-center justify-between border-b border-[#eceff1] px-4 py-3 dark:border-slate-700">
-              <span class="text-xs font-bold uppercase tracking-[0.08em] text-[#5f6368] dark:text-slate-400">Pemberitahuan</span>
-              <button type="button" class="grid size-7 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 dark:text-slate-400 dark:hover:bg-white/10" aria-label="Tutup" @click="notifOpen = false">
+            <header class="flex items-center justify-between border-b border-[var(--glass-edge)] px-4 py-3">
+              <span class="text-xs font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">Pemberitahuan</span>
+              <button type="button" class="sg-control sg-hover grid size-7 place-items-center rounded-full text-[var(--muted-foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" aria-label="Tutup" @click="notifOpen = false">
                 <IconX :size="15" :stroke="2" />
               </button>
             </header>
 
-            <div v-if="notifError" class="px-4 py-4 text-sm text-[#c5221f] dark:text-red-300">
+            <div v-if="notifError" class="px-4 py-4 text-sm text-[var(--destructive)]">
               {{ notifError }}
             </div>
 
-            <p v-else-if="notifLoading && !notifItems.length" class="px-4 py-4 text-sm text-[#5f6368] dark:text-slate-400">
+            <p v-else-if="notifLoading && !notifItems.length" class="px-4 py-4 text-sm text-[var(--muted-foreground)]">
               Memuat pemberitahuan...
             </p>
 
@@ -263,39 +263,39 @@ onBeforeUnmount(() => {
               <li
                 v-for="(n, i) in notifItems"
                 :key="i"
-                class="flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm"
-                :class="n.kind === 'warn' ? 'bg-[#fef7e0] text-[#7a5a00] dark:bg-amber-400/10 dark:text-amber-200' : 'text-[#202124] dark:text-slate-100'"
+                class="sg-control flex items-start gap-2.5 px-3 py-2.5 text-sm"
+                :class="n.kind === 'warn' ? 'text-[var(--destructive)]' : 'text-[var(--foreground)]'"
               >
                 <IconAlertTriangle v-if="n.kind === 'warn'" :size="16" :stroke="2" class="mt-0.5 shrink-0" />
-                <IconCircleCheck v-else :size="16" :stroke="2" class="mt-0.5 shrink-0" />
+                <IconCircleCheck v-else :size="16" :stroke="2" class="mt-0.5 shrink-0 text-[var(--success)]" />
                 <span class="min-w-0 leading-snug">{{ n.text }}</span>
               </li>
-              <li v-if="!notifItems.length" class="px-3 py-3 text-sm text-[#5f6368] dark:text-slate-400">
+              <li v-if="!notifItems.length" class="px-3 py-3 text-sm text-[var(--muted-foreground)]">
                 Tidak ada pemberitahuan. Semua berjalan normal.
               </li>
             </ul>
 
-            <footer class="border-t border-[#eceff1] px-4 py-3 text-right dark:border-slate-700">
-              <button type="button" class="text-xs font-medium text-[#1a73e8] transition hover:underline dark:text-sky-300" @click="loadNotif">
+            <footer class="border-t border-[var(--glass-edge)] px-4 py-3 text-right">
+              <button type="button" class="text-xs font-medium text-[var(--foreground)] underline-offset-2 transition hover:underline" @click="loadNotif">
                 Muat ulang
               </button>
             </footer>
           </div>
         </div>
-        <button type="button" class="grid size-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-black/5 hover:text-[#c5221f] dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-red-300" aria-label="Keluar" title="Keluar" @click="emit('logout')">
+        <button type="button" class="sg-control sg-hover grid size-10 place-items-center rounded-full text-[var(--muted-foreground)] transition hover:text-[var(--destructive)] focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]" aria-label="Keluar" title="Keluar" @click="emit('logout')">
           <IconLogout :size="20" :stroke="2" />
         </button>
       </div>
     </header>
 
     <div class="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[256px_minmax(0,1fr)]">
-      <div class="hidden h-full overflow-hidden border-r border-[#e8eaed] px-3 py-4 dark:border-slate-800 lg:block">
+      <div class="hidden h-full overflow-hidden border-r border-[var(--glass-edge)] px-3 py-4 lg:block">
         <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
       </div>
 
       <div v-if="isMobileNavOpen" class="fixed inset-0 z-40 lg:hidden" @click.self="closeMobileNav">
-        <div class="absolute inset-0 bg-slate-900/40" />
-        <div class="absolute left-0 top-0 flex h-full w-[280px] flex-col overflow-hidden border-r border-[#e8eaed] bg-white px-3 py-4 dark:border-slate-700 dark:bg-slate-800" data-mobile-nav-card>
+        <div class="absolute inset-0 bg-[var(--foreground)]/40" />
+        <div class="sg-panel absolute left-0 top-0 flex h-full w-[280px] flex-col overflow-hidden px-3 py-4" data-mobile-nav-card>
           <AppSidebar :remotes="remotes" :active="active" :current-section="currentSection" :user="user" @select-remote="handleSelectRemote" @view="handleView" />
         </div>
       </div>
