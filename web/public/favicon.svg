@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="KoncetCloud">
   <title>KoncetCloud</title>
-  <rect x="16" y="16" width="224" height="224" rx="60" fill="#000000"/>
-  <path fill="#FFFFFF" d="M78 76 H106 V110 L140 76 H176 L124 128 L176 180 H140 L106 146 V180 H78 Z"/>
+  <!-- FAVICON (small-size cut): tile tinta tegas (rx 40) + K putih knockout.
+       Slot brankas sengaja DIHILANGKAN di ukuran kecil (nyaris tak terlihat
+       di 16 px, dan potongannya bikin whine). -->
+  <g>
+    <rect x="16" y="16" width="224" height="224" rx="40" fill="#000000"/>
+    <path fill="#FFFFFF" d="M78 76 H106 V110 L140 76 H176 L124 128 L176 180 H140 L106 146 V180 H78 Z"/>
+  </g>
 </svg>

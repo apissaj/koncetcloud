@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256" role="img" aria-label="KoncetCloud">
   <title>KoncetCloud</title>
-  <path id="symbol" fill="#000000" fill-rule="evenodd" d="M76 16 H180 A60 60 0 0 1 240 76 V180 A60 60 0 0 1 180 240 H76 A60 60 0 0 1 16 180 V76 A60 60 0 0 1 76 16 Z M78 76 H106 V110 L140 76 H176 L124 128 L176 180 H140 L106 146 V180 H78 Z"/>
+  <!-- MARK MASTER (ink). Kotak rounded tegas (rx 40) = wadah/brankas; huruf K
+       sebagai LUBANG sungguhan (evenodd), plus slot brankas di tepi kanan.
+       Semua tembus -> 1 warna, ikut latar terang/gelap, terbaca di 16 px.
+       Geometri K: batang x78-106, diagonal tepat 45°, puncak x124. -->
+  <path id="symbol" fill="#000000" fill-rule="evenodd" d="
+    M56 16 H200 A40 40 0 0 1 240 56 V200 A40 40 0 0 1 200 240 H56 A40 40 0 0 1 16 200 V56 A40 40 0 0 1 56 16 Z
+    M78 76 H106 V110 L140 76 H176 L124 128 L176 180 H140 L106 146 V180 H78 Z
+    M240 108 H222 A14 14 0 0 0 208 122 V134 A14 14 0 0 0 222 148 H240 Z"/>
 </svg>
