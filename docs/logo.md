@@ -32,12 +32,24 @@ mengikuti warna latar (terang/gelap) — lubangnya tembus ke latar di belakangny
 
 - **Master ink** — `web/src/assets/logo.svg`, satu warna ink, untuk materi cetak
   dan ekspor.
-- **Inline (tema)** — `web/src/components/BrandMark.vue`, dipakai di header,
-  sidebar, dan halaman login. `fill="currentColor"` jadi otomatis menyesuaikan
-  tema terang/gelap.
+- **Inline (tema)** — `web/src/components/BrandMark.vue`, dipakai di halaman
+  login. `fill="currentColor"` jadi otomatis menyesuaikan tema terang/gelap.
 - **Favicon (small-size cut)** — `web/public/favicon.svg`: tile tinta tegas +
   K putih knockout. **Slot dihapus** di varian ini (nyaris tak terlihat di
   16px dan potongannya membuat whine).
+
+## Wordmark "KoncetCloud"
+
+- **Inline** — `web/src/components/BrandWordmark.vue` (dipakai di header &
+  sidebar). Huruf **K** digambar sebagai **path** dengan geometri **persis sama**
+  dengan K pada mark; sisa huruf "oncetCloud" memakai Plus Jakarta Sans
+  ExtraBold (weight 800) dengan `letter-spacing` negatif (`-0.026em`) supaya
+  terasa satu blok.
+- **Master statis** — `web/src/assets/wordmark.svg`. Memakai `<text>` + font
+  sistem → **harus di-outline (convert to path) sebelum dicetak**.
+- Ukuran: tinggi 26 px (header) dan 24 px (sidebar). Jangan pakai bersama
+  mark — huruf K-nya akan kembar.
+- Ukuran min: 18 px (di bawah itu "+"/"t" mulai rapat).
 
 ## Warna
 

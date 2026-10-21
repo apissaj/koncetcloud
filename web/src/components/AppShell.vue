@@ -15,7 +15,7 @@ import {
 } from '@tabler/icons-vue';
 import { apiFetch } from '../composables/useApi.js';
 import AppSidebar from './AppSidebar.vue';
-import BrandMark from './BrandMark.vue';
+import BrandWordmark from './BrandWordmark.vue';
 import AppSearch from './AppSearch.vue';
 import HelpModal from './HelpModal.vue';
 
@@ -190,10 +190,7 @@ onBeforeUnmount(() => {
           <IconMenu2 :size="22" :stroke="2" />
         </button>
         <div class="hidden items-center gap-2 lg:flex">
-          <span class="grid size-11 place-items-center rounded-2xl">
-            <BrandMark :size="36" class="text-[var(--foreground)]" />
-          </span>
-          <span class="text-[22px] font-semibold text-[var(--foreground)]">KoncetCloud</span>
+          <BrandWordmark :size="26" class="text-[var(--foreground)]" />
         </div>
         <span class="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] lg:hidden">
           <span class="size-2 rounded-full" :class="connected ? 'bg-[var(--success)]' : 'bg-[var(--destructive)]'"></span>

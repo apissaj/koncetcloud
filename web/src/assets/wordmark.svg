@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -1.5 893 108.5" width="893" height="108.5" role="img" aria-label="KoncetCloud">
+  <title>KoncetCloud</title>
+  <!--
+    WORDMARK MASTER (KoncetCloud).
+    "K" digambar sebagai PATH (bukan <text>): geometri K pada mark "Vault K"
+    (lihat logo.svg) yang di sini dipakai sebagai huruf biasa, bukan lubang.
+    Batang x0-28, diagonal tepat 45, puncak (46,52), cap atas y=0, baseline y=104.
+    "oncetCloud" memakai <text> + font Plus Jakarta Sans ExtraBold (weight 800);
+    cap K (104) = cap huruf tinggi font (C/l/d/t) sehingga baseline sejajar.
+
+    PENTING UNTUK CETAK/PROD: font di sini BELUM di-outline, dan berkas ini
+    TIDAK memuat webfont sendiri (SVG mandiri tak bisa memuat font aplikasi).
+    Font Plus Jakarta Sans disediakan oleh aplikasi (web/src/style.css). Tanpa
+    font itu, huruf jatuh ke font cadangan (Arial) dan cap height tidak lagi
+    sama dengan K. Untuk cetak / vektor (PDF/EPS/plotter) atau lingkungan tanpa
+    Plus Jakarta Sans, konversi dulu <text> di bawah menjadi path (mis. Inkscape:
+    Path > Object to Path, atau fontTools/opentype.js).
+
+    fill="currentColor" -> ikut tema terang/gelap saat di-inline; sebagai
+    berkas mandiri, currentColor = hitam.
+  -->
+  <g fill="currentColor">
+    <path d="M0 0H28V34L62 0H98L46 52L98 104H62L28 70V104H0Z"/>
+    <text x="99.465" y="104" font-family="Plus Jakarta Sans, Arial, sans-serif" font-size="137.4" font-weight="800" letter-spacing="-3.572">oncetCloud</text>
+  </g>
+</svg>

@@ -24,7 +24,7 @@ import {
   IconUserFilled,
 } from '@tabler/icons-vue';
 import { formatBytes } from '../composables/useFormatFile.js';
-import BrandMark from './BrandMark.vue';
+import BrandWordmark from './BrandWordmark.vue';
 
 const props = defineProps({
   remotes: { type: Array, default: () => [] },
@@ -105,10 +105,7 @@ const hiddenCount = computed(() => Math.max(0, props.remotes.length - visibleRem
     <!-- Zona 1: brand & aksi utama (tidak ikut scroll) -->
     <div class="flex shrink-0 flex-col gap-5 pb-4">
       <div class="flex items-center gap-2 lg:hidden">
-        <span class="grid size-11 place-items-center rounded-2xl">
-          <BrandMark :size="40" class="text-[var(--foreground)]" />
-        </span>
-        <span class="text-lg font-semibold text-[var(--foreground)]">KoncetCloud</span>
+        <BrandWordmark :size="24" class="text-[var(--foreground)]" />
       </div>
 
       <button
