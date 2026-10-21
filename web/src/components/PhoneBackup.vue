@@ -133,45 +133,45 @@ onMounted(loadRemotes);
 
 <template>
   <section class="mx-auto flex w-full max-w-3xl flex-col gap-5">
-    <div class="rounded-[24px] bg-white p-5 dark:bg-slate-800 sm:p-7">
-      <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[#1a73e8] dark:text-sky-400">Backup HP</p>
-      <h1 class="text-xl font-semibold text-[#202124] dark:text-slate-100">Kirim foto & video dari HP</h1>
-      <p class="mt-1 text-sm text-[#5f6368] dark:text-slate-400">
+    <div class="sg-card p-5 sm:p-7">
+      <p class="mb-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--muted-foreground)]">Backup HP</p>
+      <h1 class="text-xl font-semibold text-[var(--foreground)]">Kirim foto & video dari HP</h1>
+      <p class="mt-1 text-sm text-[var(--muted-foreground)]">
         Pilih file dari galeri HP. File dikirim bertahap lalu disimpan ke akun cloud yang kamu pilih.
       </p>
 
       <div class="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <label class="flex flex-col gap-1.5 text-xs font-medium text-[#3c4043] dark:text-slate-300">
+        <label class="flex flex-col gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           Akun tujuan
           <select
             v-model="remote"
             :disabled="busy || !remotes.length"
-            class="h-11 rounded-xl border border-[#dadce0] bg-white px-3 text-sm text-[#202124] outline-none focus:border-[#1a73e8] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            class="sg-field h-11 px-3 text-sm text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
           >
             <option v-if="loadingRemotes" value="">Memuat akun...</option>
             <option v-else-if="!remotes.length" value="">Belum ada akun</option>
             <option v-for="r in remotes" :key="r.name" :value="r.name">{{ r.name }}</option>
           </select>
         </label>
-        <label class="flex flex-col gap-1.5 text-xs font-medium text-[#3c4043] dark:text-slate-300">
+        <label class="flex flex-col gap-1.5 text-xs font-medium text-[var(--muted-foreground)]">
           Folder di dalam akun
           <input
             v-model="subdir"
             :disabled="busy"
             type="text"
             placeholder="Backup HP"
-            class="h-11 rounded-xl border border-[#dadce0] bg-white px-3.5 text-sm text-[#202124] outline-none focus:border-[#1a73e8] dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100"
+            class="sg-field h-11 px-3.5 text-sm text-[var(--foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
           />
         </label>
       </div>
 
-      <p v-if="loadError" class="mt-3 flex items-start gap-1.5 rounded-xl border border-[#ea4335]/35 bg-[#ea4335]/10 px-3 py-2 text-xs text-[#c5221f]">
+      <p v-if="loadError" class="sg-card mt-3 flex items-start gap-1.5 px-3 py-2 text-xs text-[var(--destructive)]">
         <IconAlertTriangle :size="14" :stroke="1.8" class="mt-0.5 shrink-0" />{{ loadError }}
       </p>
 
       <div class="mt-5 flex flex-wrap items-center gap-3">
         <label
-          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-full bg-[#1a73e8] px-5 text-sm font-medium text-white transition hover:bg-[#1765cc]"
+          class="sg-primary inline-flex h-11 cursor-pointer items-center gap-2 px-5 text-sm font-medium transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
           :class="busy ? 'pointer-events-none opacity-60' : ''"
         >
           <IconDeviceMobile :size="18" :stroke="1.8" />
@@ -181,7 +181,7 @@ onMounted(loadRemotes);
         <button
           v-if="!busy"
           type="button"
-          class="inline-flex h-11 items-center gap-2 rounded-full border border-[#dadce0] bg-white px-5 text-sm font-medium text-[#3c4043] transition hover:bg-[#f1f3f4] disabled:opacity-50 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"
+          class="sg-control inline-flex h-11 items-center gap-2 px-5 text-sm font-medium text-[var(--foreground)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)] disabled:opacity-50"
           :disabled="!remote || !files.some((f) => f.status === 'menunggu')"
           @click="startUpload"
         >
@@ -191,7 +191,7 @@ onMounted(loadRemotes);
         <button
           v-else
           type="button"
-          class="inline-flex h-11 items-center gap-2 rounded-full border border-amber-500/50 bg-amber-500/10 px-5 text-sm font-medium text-amber-700 transition hover:bg-amber-500/20 dark:text-amber-300"
+          class="sg-control inline-flex h-11 items-center gap-2 px-5 text-sm font-medium text-[var(--destructive)] transition focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
           @click="cancelAll"
         >
           <IconX :size="18" :stroke="1.8" />
@@ -200,49 +200,49 @@ onMounted(loadRemotes);
       </div>
     </div>
 
-    <div v-if="files.length" class="rounded-[24px] bg-white p-5 dark:bg-slate-800 sm:p-6">
-      <p class="mb-3 text-xs text-[#5f6368] dark:text-slate-400">
+    <div v-if="files.length" class="sg-card p-5 sm:p-6">
+      <p class="mb-3 text-xs text-[var(--muted-foreground)]">
         {{ doneCount }} dari {{ files.length }} selesai · total {{ fmt(totalBytes) }}
       </p>
       <ul class="flex flex-col gap-2">
         <li
           v-for="(item, i) in files"
           :key="i"
-          class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl border border-[#e0e3e7] p-3 dark:border-slate-700"
+          class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-b border-[var(--glass-edge)] p-3 last:border-b-0"
         >
           <div class="min-w-0">
-            <p class="truncate text-sm text-[#202124] dark:text-slate-100">{{ item.file.name }}</p>
-            <div class="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#f1f3f4] dark:bg-slate-700">
+            <p class="truncate text-sm text-[var(--foreground)]">{{ item.file.name }}</p>
+            <div class="sg-groove mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--muted)]">
               <div
-                class="h-full bg-[#1a73e8] transition-[width]"
+                class="h-full bg-[var(--primary)] transition-[width]"
                 :style="{ width: (item.file.size ? (item.sent / item.file.size) * 100 : 0) + '%' }"
               />
             </div>
-            <p class="mt-1 text-[11px] text-[#5f6368] dark:text-slate-400">
+            <p class="mt-1 text-[11px] text-[var(--muted-foreground)]">
               {{ fmt(item.file.size) }}
               <span v-if="item.status === 'mengirim'"> · mengirim {{ fmt(item.sent) }}</span>
-              <span v-if="item.error" class="text-[#c5221f] dark:text-red-300"> · {{ item.error }}</span>
+              <span v-if="item.error" class="text-[var(--destructive)]"> · {{ item.error }}</span>
             </p>
           </div>
           <span
             v-if="item.status === 'selesai'"
-            class="inline-flex items-center gap-1 rounded-full border border-[#34a853]/35 bg-[#e6f4ea] px-2.5 py-0.5 text-[11px] font-medium text-[#137333]"
+            class="sg-control inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--success)]"
           >
             <IconCircleCheck :size="13" :stroke="1.8" />Selesai
           </span>
           <span
             v-else-if="item.status === 'gagal'"
-            class="rounded-full border border-[#ea4335]/35 bg-[#fce8e6] px-2.5 py-0.5 text-[11px] font-medium text-[#c5221f]"
+            class="sg-control rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--destructive)]"
           >Gagal</span>
           <span
             v-else-if="item.status === 'mengirim'"
-            class="rounded-full border border-[#1a73e8]/40 bg-[#e8f0fe] px-2.5 py-0.5 text-[11px] font-medium text-[#1967d2]"
+            class="sg-state rounded-full px-2.5 py-0.5 text-[11px] font-medium text-[var(--status-running)]"
           >Mengirim</span>
           <button
             v-else
             type="button"
             :disabled="busy"
-            class="grid size-8 place-items-center rounded-full text-[#5f6368] transition hover:bg-[#f1f3f4] disabled:opacity-40"
+            class="grid size-8 place-items-center rounded-full text-[var(--muted-foreground)] transition hover:bg-[var(--muted)] disabled:opacity-40 focus-visible:ring-2 focus-visible:ring-[var(--focus-line)]"
             aria-label="Hapus dari daftar"
             @click="removeOne(i)"
           >
@@ -252,9 +252,9 @@ onMounted(loadRemotes);
       </ul>
     </div>
 
-    <div v-else class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[#e0e3e7] py-14 text-center dark:border-slate-700">
-      <IconDeviceMobile :size="36" :stroke="1.5" class="text-[#5f6368]" />
-      <p class="text-sm text-[#5f6368] dark:text-slate-400">Belum ada file dipilih.</p>
+    <div v-else class="flex flex-col items-center gap-2 rounded-[24px] border border-dashed border-[var(--glass-edge)] py-14 text-center">
+      <IconDeviceMobile :size="36" :stroke="1.5" class="text-[var(--muted-foreground)]" />
+      <p class="text-sm text-[var(--muted-foreground)]">Belum ada file dipilih.</p>
     </div>
   </section>
 </template>
