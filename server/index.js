@@ -1196,16 +1196,15 @@ if (fs.existsSync(dist)) {
   // index: false -> '/' TIDAK dilayani static; jatuh ke handler di bawah
   // supaya nonce CSP ikut disuntik ke script inline.
   // '/index.html' juga harus lewat handler itu: kalau dilayani static, file
-  // mentah berisi placeholder __CSP_NONCE__ bocor ke klien.
-  app.use((req, res, next) => {
-    if (req.path === '/index.html') {
-      req.url = '/';
-    }
-    next();
-  });
+  // mentah berisi placeholder __CSP_NONCE__ bocor ke klien. Kita tendang
+  // langsung (bukan mengubah req.url) karena membandingkan path setelah static
+  // tidak andal untuk request yang eksplisit menuju file.
+  app.get('/index.html', (_req, res) => res.redirect(308, '/'));
   app.use(express.static(dist, { index: false }));
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
+    // Aset yang hilang harus 404, bukan HTML SPA (bikin error MIME di browser).
+    if (req.path.startsWith('/assets/')) return next();
     // Suntikkan nonce CSP ke script inline (placeholder dari web/index.html)
     // sebelum dikirim. Script eksternal (type="module" src=...) tak perlu nonce.
     try {
