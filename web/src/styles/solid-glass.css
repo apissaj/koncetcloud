@@ -1,0 +1,240 @@
+/* ---- Utilitas Solid Glass (L2) ------------------------------------------
+   Sumber: deeplethe/solid-glass (MIT), jalur "opaque" (tanpa blur).
+   Semua kelas berprefiks `sg-`; belum dipakai komponen mana pun.
+   Ditulis di @layer components agar masih bisa ditimpa utilitas Tailwind.
+   Aturan: tanpa selector polos/`*`, tanpa `backdrop-filter`, gelap lewat `.dark .sg-…`,
+   setiap box-shadow kustom menyertakan var(--tw-ring-shadow, 0 0 #0000). */
+
+@layer components {
+  /* Pane: resep SolID Glass (rim/inner/edge/contact/shade). border:0 wajib
+     supaya tidak muncul cincin ganda di samping bayangan. */
+  .sg-panel {
+    border: 0;
+    background-color: var(--panel);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      inset 0 1px 0 var(--glass-inner),
+      inset 0 0 0 1px var(--glass-edge),
+      0 1px 2px var(--glass-contact);
+  }
+
+  .sg-card {
+    border: 0;
+    background-color: var(--card);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      inset 0 1px 0 var(--glass-rim),
+      inset 0 0 0 1px var(--glass-inner),
+      0 0 0 1px var(--glass-edge),
+      0 1px 2px var(--glass-contact),
+      0 12px 32px -14px var(--glass-shade),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-popover {
+    border: 0;
+    background-color: var(--popover);
+    border-radius: var(--radius-lg);
+    box-shadow:
+      inset 0 1px 0 var(--glass-rim),
+      inset 0 -1px 0 var(--popover-under),
+      0 0 0 1px var(--popover-edge),
+      0 24px 60px -18px var(--glass-shade),
+      0 6px 16px -6px var(--glass-lift),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-control {
+    border: 0;
+    background-color: var(--glass-control);
+    border-radius: var(--radius-control);
+    box-shadow:
+      inset 0 1px 0 var(--glass-rim),
+      0 0 0 1px var(--glass-edge),
+      0 1px 2px var(--glass-contact),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-primary {
+    border: 0;
+    background-color: color-mix(in oklch, var(--primary) var(--primary-solid), transparent);
+    color: var(--primary-foreground);
+    border-radius: var(--radius-control);
+    box-shadow:
+      inset 0 1px 0 var(--primary-rim),
+      inset 0 -1px 0 var(--primary-under),
+      inset 0 0 0 1px var(--primary-inner),
+      0 1px 2px var(--glass-contact),
+      0 8px 18px -9px var(--glass-shade),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-groove {
+    box-shadow:
+      inset 0 1px 1.5px var(--well-shade),
+      inset 0 -1px 0 var(--well-rim),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-state {
+    background-color: var(--glass-state);
+    box-shadow:
+      inset 0 1px 0 var(--glass-state-rim),
+      0 0 0 1px var(--glass-state-edge),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-field {
+    background-color: var(--field);
+    border: 0;
+    border-radius: var(--radius-control);
+    box-shadow:
+      inset 0 1px 0 var(--field-rim),
+      0 0 0 1px var(--field-edge),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  .sg-field:focus-visible,
+  .sg-field:focus-within {
+    box-shadow:
+      inset 0 1px 0 var(--field-rim),
+      0 0 0 1px var(--focus-line),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  /* Interaksi: hover = pane menipis, active = bayangan bawah hilang (pane "duduk"). */
+  .sg-hover:hover {
+    background-color: var(--hover);
+  }
+
+  .sg-hover-faint:hover {
+    background-color: var(--hover-faint);
+  }
+
+  .sg-primary:hover {
+    background-color: color-mix(in oklch, var(--primary) calc(var(--primary-solid) - 10%), transparent);
+  }
+
+  .sg-primary:active {
+    box-shadow:
+      inset 0 1px 0 var(--primary-rim),
+      inset 0 -1px 0 var(--primary-under),
+      inset 0 0 0 1px var(--primary-inner),
+      0 1px 1px var(--glass-contact),
+      var(--tw-ring-shadow, 0 0 #0000);
+  }
+
+  /* Motion: selalu punya arti — menunggu, bekerja, bar hidup, muncul. */
+  @keyframes sg-dot-flash {
+    0%,
+    80%,
+    100% {
+      opacity: 0.35;
+    }
+    40% {
+      opacity: 1;
+    }
+  }
+
+  .sg-dots > * {
+    animation: sg-dot-flash 1.2s ease-in-out infinite;
+  }
+
+  .sg-dots > *:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .sg-dots > *:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes sg-status-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .sg-shimmer {
+    background-image: linear-gradient(100deg, var(--muted-foreground) 35%, var(--foreground) 50%, var(--muted-foreground) 65%);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: sg-status-shimmer 2.4s linear infinite;
+  }
+
+  @keyframes sg-sweep {
+    0% {
+      inset-inline-start: -35%;
+    }
+    100% {
+      inset-inline-start: 100%;
+    }
+  }
+
+  .sg-progress-glow {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .sg-progress-glow::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: -35%;
+    width: 35%;
+    background: linear-gradient(90deg, transparent, oklch(1 0 0 / 90%), transparent);
+    animation: sg-sweep 1.6s ease-in-out infinite;
+  }
+
+  @keyframes sg-float-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .sg-float-in {
+    animation: sg-float-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @keyframes sg-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .sg-fade-in {
+    animation: sg-fade-in 240ms ease-out;
+  }
+
+  /* Jalan mati: salinan makna Solid Glass — reduced motion mematikan semua animasi. */
+  @media (prefers-reduced-motion: reduce) {
+    .sg-dots > *,
+    .sg-shimmer,
+    .sg-progress-glow::after,
+    .sg-float-in,
+    .sg-fade-in {
+      animation: none;
+    }
+
+    .sg-shimmer {
+      color: inherit;
+      background-image: none;
+    }
+
+    .sg-progress-glow::after {
+      opacity: 0;
+    }
+  }
+}

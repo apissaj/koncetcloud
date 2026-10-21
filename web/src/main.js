@@ -1,5 +1,6 @@
 import { createApp } from 'vue';
 import './style.css';
+import './styles/solid-glass.css';
 import App from './App.vue';
 
 const storedTheme = window.localStorage.getItem('omni-buddy-theme');
