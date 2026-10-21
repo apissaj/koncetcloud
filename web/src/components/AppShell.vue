@@ -13,9 +13,9 @@ import {
   IconSun,
   IconUser,
 } from '@tabler/icons-vue';
-import logoUrl from '../assets/logo.svg';
 import { apiFetch } from '../composables/useApi.js';
 import AppSidebar from './AppSidebar.vue';
+import BrandMark from './BrandMark.vue';
 import AppSearch from './AppSearch.vue';
 import HelpModal from './HelpModal.vue';
 
@@ -190,8 +190,8 @@ onBeforeUnmount(() => {
           <IconMenu2 :size="22" :stroke="2" />
         </button>
         <div class="hidden items-center gap-2 lg:flex">
-          <span class="sg-control grid size-11 place-items-center overflow-hidden">
-            <img :src="logoUrl" alt="KoncetCloud" class="size-9 object-contain" />
+          <span class="grid size-11 place-items-center rounded-2xl">
+            <BrandMark :size="36" class="text-[var(--foreground)]" />
           </span>
           <span class="text-[22px] font-semibold text-[var(--foreground)]">KoncetCloud</span>
         </div>

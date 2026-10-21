@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { IconCloudFilled, IconLock, IconUser } from '@tabler/icons-vue';
-import logoUrl from '../assets/logo.svg';
+import BrandMark from './BrandMark.vue';
 
 const emit = defineEmits(['authed']);
 
@@ -54,7 +54,7 @@ async function submit() {
     <form class="sg-card w-full max-w-[420px] p-7" @submit.prevent="submit">
       <div class="mb-6 flex flex-col items-center gap-3 text-center">
         <span class="grid size-14 place-items-center overflow-hidden rounded-2xl bg-[var(--muted)]">
-          <img :src="logoUrl" alt="KoncetCloud" class="size-11 object-contain" />
+          <BrandMark :size="44" class="text-[var(--foreground)]" />
         </span>
         <div>
           <h1 class="text-xl font-semibold text-[var(--foreground)]">KoncetCloud</h1>
