@@ -23,6 +23,15 @@ const ACTIONS = {
   connect: 'Sambungkan akun',
   disconnect: 'Putuskan akun',
   download: 'Unduh berkas',
+  localsend_start: 'Receiver LocalSend aktif',
+  localsend_prepare: 'Siapkan transfer',
+  localsend_upload: 'Upload file',
+  localsend_cancel: 'Batalkan transfer',
+  localsend_cleanup: 'Bersihkan file gagal',
+  job_mirror: 'Buat job mirror',
+  phone_upload: 'Upload dari browser',
+  platform_connect: 'Sambungkan akun',
+  platform_disconnect: 'Putuskan akun',
 };
 
 const entries = ref([]);
@@ -120,19 +129,21 @@ onMounted(load);
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(e, i) in entries" :key="i" class="align-top border-b border-[var(--border)]">
-            <td class="whitespace-nowrap px-4 py-3 font-mono text-xs text-[var(--muted-foreground)]">{{ fmtTs(e.ts) }}</td>
-            <td class="px-4 py-3 font-medium text-[var(--foreground)]">{{ e.user || '(anonim)' }}</td>
-            <td class="px-4 py-3">
+          <tr v-for="(e, i) in entries" :key="i" class="border-b border-[var(--border)]">
+            <td class="whitespace-nowrap px-4 py-3 align-middle font-mono text-xs text-[var(--muted-foreground)]">{{ fmtTs(e.ts) }}</td>
+            <td class="px-4 py-3 align-middle font-medium text-[var(--foreground)]">{{ e.user || '(anonim)' }}</td>
+            <td class="px-4 py-3 align-middle">
               <span class="inline-flex items-center gap-1.5">
                 <IconAlertTriangle v-if="e.ok === false" :size="13" :stroke="2" class="shrink-0 text-[var(--destructive)]" />
                 <IconCircleCheck v-else :size="13" :stroke="2" class="shrink-0 text-[var(--success)]" />
                 {{ label(e.action) }}
               </span>
             </td>
-            <td class="sg-popover hidden max-w-[320px] truncate px-3 py-2 text-xs text-[var(--muted-foreground)] sm:table-cell" :title="e.detail || ''">{{ e.detail || '-' }}</td>
-            <td class="hidden px-4 py-3 font-mono text-xs text-[var(--muted-foreground)] md:table-cell">{{ e.ip || '-' }}</td>
-            <td class="px-4 py-3">
+            <td class="hidden max-w-[320px] px-4 py-3 align-middle text-xs text-[var(--muted-foreground)] sm:table-cell">
+              <span class="block truncate" :title="e.detail || ''">{{ e.detail || '-' }}</span>
+            </td>
+            <td class="hidden px-4 py-3 align-middle font-mono text-xs text-[var(--muted-foreground)] md:table-cell">{{ e.ip || '-' }}</td>
+            <td class="px-4 py-3 align-middle">
               <span
                 class="rounded-full px-2.5 py-0.5 text-[11px] font-medium"
                 :class="e.ok === false
