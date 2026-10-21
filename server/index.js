@@ -252,14 +252,11 @@ const AUDIT_DIR = path.join(__dirname, 'logs');
 const AUDIT_FILE = path.join(AUDIT_DIR, 'audit.jsonl');
 
 function clientIp(req) {
-  // `trust proxy` = 'loopback', jadi req.trustProxy hanya true bila peer
-  // tepercaya (tunnel lokal). Kalau peer BUKAN loopback, abaikan XFF mentah
-  // supaya klien tak bisa memalsukan IP di audit log.
-  if (req.trustProxy) {
-    const fwd = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
-    return fwd || req.ip || 'unknown';
-  }
-  return req.socket?.remoteAddress || req.ip || 'unknown';
+  // `req.ip` sudah menghormati `trust proxy` (loopback): Express membuang hop
+  // XFF yang tidak dipercaya. Di belakang Cloudflare Tunnel peer adalah loopback,
+  // jadi req.ip = IP klien asli dari header tepercaya. Pakai req.ip — JANGAN
+  // parsing XFF mentah (bisa dipalsukan; dan `req.trustProxy` tak ada di Express 4).
+  return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
 /** Catat aksi ke audit. detail maksimum ~200 karakter; jangan pernah password. */
@@ -295,6 +292,9 @@ app.set('trust proxy', 'loopback');
 // (tema pra-paint). Nonce disimpan di res.locals agar penyaji index.html
 // bisa menyuntikkannya ke atribut <script nonce="...">.
 const CSP_NONCE_PLACEHOLDER = '__CSP_NONCE__';
+// Origin rclone RC (untuk preview lewat --rc-serve). Diturunkan dari env RC_ADDR.
+let RC_ORIGIN = 'http://127.0.0.1:5572';
+try { RC_ORIGIN = new URL(RC).origin; } catch { /* pakai default */ }
 function setSecurityHeaders(res) {
   const nonce = res.locals.cspNonce || crypto.randomBytes(16).toString('base64');
   res.locals.cspNonce = nonce;
@@ -312,8 +312,12 @@ function setSecurityHeaders(res) {
       "default-src 'self'",
       `script-src 'self' 'nonce-${nonce}'`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob:",
-      "connect-src 'self'",
+      // Preview gambar/video diambil lewat /api/download yang me-redirect ke
+      // origin rclone (--rc-serve). Origin itu harus diizinkan, kalau tidak
+      // preview rusak (data tetap tak lewat proses ini: hanya redirect).
+      `img-src 'self' data: blob: ${RC_ORIGIN}`,
+      `media-src 'self' blob: ${RC_ORIGIN}`,
+      `connect-src 'self' ${RC_ORIGIN}`,
       "font-src 'self' data: https://fonts.gstatic.com",
       "object-src 'none'",
       "base-uri 'self'",
@@ -650,11 +654,21 @@ app.post('/api/platforms/connect', adminOnly, async (req, res) => {
   try {
     if (platform.auth === 'form') {
       const out = await connectForm({ rc, platform, remoteName, user, pass });
-      if (out.status < 400) invalidateRemoteCache(remoteName);
+      // Selalu buang cache remote: connectForm bisa membuat config lalu
+      // menghapusnya (kredensial salah) — cache lama harus hilang.
+      invalidateRemoteCache(remoteName);
       audit(req, 'connect', `platform=${id} remote=${remoteName}`, out.status < 400);
       return res.status(out.status).json(out.body);
     }
-    const out = await startOAuth({ rc, platform, remoteName });
+    const out = await startOAuth({
+      rc,
+      platform,
+      remoteName,
+      // Dipanggil saat config remote benar-benar tersimpan (atau dihapus) —
+      // itu titik saat cache kapasitas/akun jadi basi.
+      onRemoteSaved: (name) => invalidateRemoteCache(name),
+    });
+    invalidateRemoteCache(remoteName);
     // OAuth belum selesai di sini; cache tetap dibuang agar saat token jadi
     // data lama tidak tampil. aman: nama remote sama.
     if (out.status < 400) invalidateRemoteCache(remoteName);
@@ -1179,8 +1193,16 @@ if (fs.existsSync(dist)) {
     return indexHtmlCache.html;
   }
 
-  // index: false -> '/' TIDAK dilayani static;推向 ke handler di bawah
+  // index: false -> '/' TIDAK dilayani static; jatuh ke handler di bawah
   // supaya nonce CSP ikut disuntik ke script inline.
+  // '/index.html' juga harus lewat handler itu: kalau dilayani static, file
+  // mentah berisi placeholder __CSP_NONCE__ bocor ke klien.
+  app.use((req, res, next) => {
+    if (req.path === '/index.html') {
+      req.url = '/';
+    }
+    next();
+  });
   app.use(express.static(dist, { index: false }));
   app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
@@ -1189,10 +1211,13 @@ if (fs.existsSync(dist)) {
     try {
       const html = loadIndexHtml().replaceAll(CSP_NONCE_PLACEHOLDER, res.locals.cspNonce || '');
       res.type('html').send(html);
-    } catch {
-      next();
+    } catch (e) {
+      next(e);
     }
   });
+  // Fallback terakhir: path yang tak-serving (mis. aset hilang) -> 404, bukan
+  // menggantung tanpa respons.
+  app.use((_req, res) => res.status(404).end());
 }
 
 app.listen(PORT, '127.0.0.1', () => {

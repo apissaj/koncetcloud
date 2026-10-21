@@ -539,10 +539,14 @@ async function onOAuthClose(rec, rc, code) {
     if (donor.client_id) parameters.client_id = donor.client_id;
     if (donor.client_secret) parameters.client_secret = donor.client_secret;
     await rc('config/create', { name: rec.remote, type: rec.backend, parameters });
+    // Config remote baru berhasil disimpan -> beri tahu pemanggil (biar cache
+    // kapasitas/akun di server dibuang, tak menyajikan data remote lama).
+    try { rec.onRemoteSaved?.(rec.remote); } catch { /* cache tak boleh menjatuhkan OAuth */ }
     finishOAuth(rec.id, { status: 'done' });
   } catch (e) {
     try {
       await rc('config/delete', { name: rec.remote });
+      try { rec.onRemoteSaved?.(rec.remote); } catch { /* abaikan */ }
     } catch {
       /* tidak ada config setengah jadi yang perlu dihapus */
     }
@@ -582,7 +586,7 @@ function waitForAuthUrl(rec, ms) {
 }
 
 // --- POST /api/platforms/connect (mode oauth) ---------------------------
-export async function startOAuth({ rc, platform, remoteName }) {
+export async function startOAuth({ rc, platform, remoteName, onRemoteSaved }) {
   if (!isValidRemoteName(remoteName)) {
     return { status: 400, body: { error: 'Nama remote tidak valid.', code: 'bad_request' } };
   }
@@ -615,6 +619,7 @@ export async function startOAuth({ rc, platform, remoteName }) {
     proc: null,
     timer: null,
     retried: false,
+    onRemoteSaved: typeof onRemoteSaved === 'function' ? onRemoteSaved : null,
   };
   oauthProcesses.set(processId, rec);
 
